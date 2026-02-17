@@ -2,11 +2,11 @@
 
 ## Project Overview
 seo-pilot is an organic SEO promotion CLI tool that automates indexing, rank tracking, on-page audits, and discovery of forum/directory engagement opportunities.
-Production-ready, lightweight, zero-framework approach.
+Production-ready, lightweight, zero-framework approach. Private repo: `xConde/seo-pilot`.
 
 ## Stack
-- Node >= 20, TypeScript strict mode, ESM
-- Vitest for tests
+- Node >= 20, TypeScript strict mode (`noUncheckedIndexedAccess`), ESM
+- Vitest for tests (165 tests across 20 files)
 - Zod for config validation
 - Only 3 runtime deps: cheerio, jsonwebtoken, zod
 
@@ -22,25 +22,18 @@ Production-ready, lightweight, zero-framework approach.
 | `audit` | Validate on-page SEO (meta, schema, links, sitemap) |
 
 ## Documentation
-- User-facing docs: `README.md` (quickstart) and `docs/setup-guide.md` (credential setup)
+- `README.md` — quickstart, commands, config shape, CI snippet
+- `docs/setup-guide.md` — manual credential setup for all 4 APIs
+- `seo-pilot.config.example.json` — copy-and-fill config template
 
 ## Development
 
 ```bash
-# Run tests
-npm test
-
-# Typecheck
-npx tsc --noEmit
-
-# Run in dev
-npx tsx src/cli.ts <command>
-
-# Run compiled
-npm run build && node dist/cli.js <command>
-
-# Coverage
-npm run test:coverage
+npm test                        # vitest (165 tests)
+npx tsc --noEmit                # typecheck
+npx tsx src/cli.ts <command>    # run in dev
+npm run build                   # compile to dist/
+npm run test:coverage           # coverage report
 ```
 
 ## Architecture
@@ -51,21 +44,23 @@ src/
 ├── auth/        # JWT generation for Google APIs
 ├── commands/    # CLI command implementations (setup, index, inspect, rank, discover, audit)
 ├── config/      # Zod schema and config loading with ${VAR} env substitution
-├── state/       # State persistence for tracking operations
+├── state/       # State persistence (.seo-pilot/ history files)
 └── utils/       # Arg parsing, logging, HTTP client, sitemap parsing
 ```
 
 ## Config
-
-- Config schema: `src/config/schema.ts` (Zod validation)
+- Schema source of truth: `src/config/schema.ts`
 - Supports `${VAR}` env substitution in config values
 - Auto-loads `.env.local` for local secrets
 - Default config: `seo-pilot.config.json` (override with `--config`)
 
 ## Conventions
-
-- TypeScript strict, no `any`, `noUncheckedIndexedAccess`
-- Tests colocated in `tests/` mirroring `src/` structure
+- TypeScript strict, no `any`
+- Tests in `tests/` mirroring `src/` structure
 - Conventional commit messages
 - No heavy CLI frameworks — manual arg parsing in `utils/args.ts`
 - Minimal deps: only cheerio, jsonwebtoken, zod at runtime
+
+## Security
+- Multiple red-team audits completed — input validation, URL sanitization, credential handling all hardened
+- `.credentials/`, `.env.local`, `.seo-pilot/` are gitignored
