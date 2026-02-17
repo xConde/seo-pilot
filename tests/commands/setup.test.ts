@@ -12,6 +12,10 @@ vi.mock('node:readline/promises', () => ({
   createInterface: vi.fn(),
 }));
 
+vi.mock('../../src/auth/google.js', () => ({
+  getGoogleAccessToken: vi.fn(),
+}));
+
 describe('setup command', () => {
   const mockReadline = {
     question: vi.fn(),
@@ -214,5 +218,253 @@ describe('setup command', () => {
     });
 
     expect(mockReadline.close).toHaveBeenCalled();
+  });
+
+  describe('API validation', () => {
+    it('validates IndexNow by fetching key file', async () => {
+      const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
+
+      const answers = [
+        'https://example.com',
+        'https://example.com/sitemap.xml',
+        'keyword1',
+        'y', // configure IndexNow
+        'y', // deployed key file
+        'n', // skip other services
+        'n',
+        'n',
+      ];
+
+      let answerIndex = 0;
+      mockReadline.question.mockImplementation(() => {
+        return Promise.resolve(answers[answerIndex++]);
+      });
+
+      let keyFileUrl = '';
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('sitemap.xml') || url === 'https://example.com') {
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        if (url.includes('.txt')) {
+          keyFileUrl = url;
+          const key = url.split('/').pop()?.replace('.txt', '') || '';
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve(key),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      await runSetup();
+
+      // Verify key file was fetched twice: once during setup, once during validation
+      expect(keyFileUrl).toMatch(/^https:\/\/example\.com\/[a-f0-9]{32}\.txt$/);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringMatching(/\.txt$/));
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+
+    it('validates Google credentials by getting access token', async () => {
+      const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
+      const mockReadFile = vi.mocked((await import('node:fs/promises')).readFile);
+      const { getGoogleAccessToken } = await import('../../src/auth/google.js');
+      const mockGetAccessToken = vi.mocked(getGoogleAccessToken);
+
+      const answers = [
+        'https://example.com',
+        'https://example.com/sitemap.xml',
+        'keyword1',
+        'n', // skip IndexNow
+        'y', // configure Google
+        '/path/to/service-account.json',
+        'sc-domain:example.com',
+        'n', // skip other services
+        'n',
+      ];
+
+      let answerIndex = 0;
+      mockReadline.question.mockImplementation(() => {
+        return Promise.resolve(answers[answerIndex++]);
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, status: 200 });
+
+      mockReadFile.mockResolvedValue(JSON.stringify({
+        client_email: 'test@example.iam.gserviceaccount.com',
+        private_key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+      }));
+
+      mockGetAccessToken.mockResolvedValue('mock-access-token');
+
+      await runSetup();
+
+      // Verify getGoogleAccessToken was called during validation
+      expect(mockGetAccessToken).toHaveBeenCalledWith(
+        '/path/to/service-account.json',
+        ['https://www.googleapis.com/auth/indexing']
+      );
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+
+    it('validates Bing API key by submitting test URL', async () => {
+      const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
+
+      const answers = [
+        'https://example.com',
+        'https://example.com/sitemap.xml',
+        'keyword1',
+        'n', // skip IndexNow
+        'n', // skip Google
+        'y', // configure Bing
+        'bing-api-key-123',
+        'n', // skip Custom Search
+      ];
+
+      let answerIndex = 0;
+      mockReadline.question.mockImplementation(() => {
+        return Promise.resolve(answers[answerIndex++]);
+      });
+
+      let bingApiCalled = false;
+      mockFetch.mockImplementation((url: string, options?: any) => {
+        if (url.includes('sitemap.xml') || url === 'https://example.com') {
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        if (url.includes('bing.com/webmaster/api.svc')) {
+          bingApiCalled = true;
+          expect(url).toContain('bing-api-key-123');
+          expect(options?.method).toBe('POST');
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      await runSetup();
+
+      expect(bingApiCalled).toBe(true);
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+
+    it('validates Custom Search by making test query', async () => {
+      const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
+
+      const answers = [
+        'https://example.com',
+        'https://example.com/sitemap.xml',
+        'keyword1',
+        'n', // skip IndexNow
+        'n', // skip Google
+        'n', // skip Bing
+        'y', // configure Custom Search
+        'custom-search-api-key',
+        'custom-search-engine-id',
+      ];
+
+      let answerIndex = 0;
+      mockReadline.question.mockImplementation(() => {
+        return Promise.resolve(answers[answerIndex++]);
+      });
+
+      let customSearchCalled = false;
+      mockFetch.mockImplementation((url: string) => {
+        if (url.includes('sitemap.xml') || url === 'https://example.com') {
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        if (url.includes('googleapis.com/customsearch')) {
+          customSearchCalled = true;
+          expect(url).toContain('custom-search-api-key');
+          expect(url).toContain('custom-search-engine-id');
+          expect(url).toContain('site%3Aexample.com');
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      await runSetup();
+
+      expect(customSearchCalled).toBe(true);
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
+
+    it('continues validation even when individual services fail', async () => {
+      const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
+      const mockReadFile = vi.mocked((await import('node:fs/promises')).readFile);
+      const { getGoogleAccessToken } = await import('../../src/auth/google.js');
+      const mockGetAccessToken = vi.mocked(getGoogleAccessToken);
+
+      const answers = [
+        'https://example.com',
+        'https://example.com/sitemap.xml',
+        'keyword1',
+        'y', // configure IndexNow
+        'y', // deployed key file
+        'y', // configure Google
+        '/path/to/service-account.json',
+        'sc-domain:example.com',
+        'y', // configure Bing
+        'invalid-bing-key',
+        'y', // configure Custom Search
+        'invalid-custom-search-key',
+        'invalid-engine-id',
+      ];
+
+      let answerIndex = 0;
+      mockReadline.question.mockImplementation(() => {
+        return Promise.resolve(answers[answerIndex++]);
+      });
+
+      // Mock different failures for each service
+      mockFetch.mockImplementation((url: string, options?: any) => {
+        if (url.includes('sitemap.xml') || url === 'https://example.com') {
+          return Promise.resolve({ ok: true, status: 200 });
+        }
+        if (url.includes('.txt')) {
+          const key = url.split('/').pop()?.replace('.txt', '') || '';
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            text: () => Promise.resolve(key),
+          });
+        }
+        if (url.includes('bing.com/webmaster')) {
+          // Bing fails with 401
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            text: () => Promise.resolve('Invalid API key'),
+          });
+        }
+        if (url.includes('googleapis.com/customsearch')) {
+          // Custom Search fails with 403
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            text: () => Promise.resolve('Invalid credentials'),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      mockReadFile.mockResolvedValue(JSON.stringify({
+        client_email: 'test@example.iam.gserviceaccount.com',
+        private_key: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n',
+      }));
+
+      // Google fails with authentication error
+      mockGetAccessToken.mockRejectedValue(new Error('Invalid service account credentials'));
+
+      await runSetup();
+
+      // Verify all services were attempted despite failures
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('.txt'));
+      expect(mockGetAccessToken).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('bing.com/webmaster'),
+        expect.any(Object)
+      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('customsearch'));
+      expect(mockReadline.close).toHaveBeenCalled();
+    });
   });
 });

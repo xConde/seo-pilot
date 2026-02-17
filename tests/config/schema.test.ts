@@ -49,6 +49,7 @@ describe('ConfigSchema', () => {
       discover: {
         sites: ['custom.com'],
         resultsPerKeyword: 10,
+        directoryQueries: ['custom directory query'],
       },
     };
 
@@ -139,6 +140,44 @@ describe('ConfigSchema', () => {
         sites: ['reddit.com', 'quora.com'],
         resultsPerKeyword: 5,
       });
+    }
+  });
+
+  it('validates discover.directoryQueries as optional array of strings', () => {
+    const config = {
+      version: '1.0.0',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      discover: {
+        directoryQueries: ['query 1', 'query 2', 'query 3'],
+      },
+    };
+
+    const result = ConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.discover.directoryQueries).toEqual(['query 1', 'query 2', 'query 3']);
+    }
+  });
+
+  it('allows discover.directoryQueries to be omitted', () => {
+    const config = {
+      version: '1.0.0',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      discover: {
+        sites: ['reddit.com'],
+      },
+    };
+
+    const result = ConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.discover.directoryQueries).toBeUndefined();
     }
   });
 });

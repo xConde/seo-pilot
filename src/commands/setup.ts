@@ -4,6 +4,7 @@ import { writeFile, readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import { log } from '../utils/logger.js';
+import { getGoogleAccessToken } from '../auth/google.js';
 
 interface SetupConfig {
   siteUrl: string;
@@ -294,24 +295,84 @@ async function writeConfigFiles(config: SetupConfig): Promise<void> {
 async function validateApis(config: SetupConfig): Promise<void> {
   log.info('\n=== Validating API Configuration ===\n');
 
-  // IndexNow - already validated during setup
+  // IndexNow - validate key file is accessible
   if (config.indexnowKey) {
-    log.success('IndexNow: Configured');
+    try {
+      const host = new URL(config.siteUrl).host;
+      const keyFileUrl = `https://${host}/${config.indexnowKey}.txt`;
+      const response = await fetch(keyFileUrl);
+      if (response.ok) {
+        const content = await response.text();
+        if (content.trim() === config.indexnowKey) {
+          log.success('IndexNow: Valid (key file verified)');
+        } else {
+          log.error('IndexNow: Failed (key file content mismatch)');
+        }
+      } else {
+        log.error(`IndexNow: Failed (key file returned HTTP ${response.status})`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      log.error(`IndexNow: Failed (${message})`);
+    }
   }
 
-  // Google Cloud - basic file validation already done
+  // Google Cloud - validate service account can get access token
   if (config.googleServiceAccountPath && config.googleSiteUrl) {
-    log.success('Google Cloud: Configured (service account file valid)');
+    try {
+      const scopes = ['https://www.googleapis.com/auth/indexing'];
+      await getGoogleAccessToken(config.googleServiceAccountPath, scopes);
+      log.success('Google Cloud: Valid (service account authenticated)');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      log.error(`Google Cloud: Failed (${message})`);
+    }
   }
 
-  // Bing - can't validate without making actual API call
+  // Bing - validate API key with test URL submission
   if (config.bingApiKey) {
-    log.success('Bing Webmaster: Configured (API key provided)');
+    try {
+      const endpoint = `https://ssl.bing.com/webmaster/api.svc/json/SubmitUrl?apikey=${config.bingApiKey}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          siteUrl: config.siteUrl,
+          url: config.siteUrl,
+        }),
+      });
+
+      if (response.ok) {
+        log.success('Bing Webmaster: Valid (API key authenticated)');
+      } else {
+        const errorText = await response.text();
+        log.error(`Bing Webmaster: Failed (HTTP ${response.status}: ${errorText})`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      log.error(`Bing Webmaster: Failed (${message})`);
+    }
   }
 
-  // Custom Search - can't validate without making actual API call
+  // Custom Search - validate with test query
   if (config.customSearchApiKey && config.customSearchEngineId) {
-    log.success('Custom Search Engine: Configured (credentials provided)');
+    try {
+      const query = `site:${new URL(config.siteUrl).host}`;
+      const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&key=${config.customSearchApiKey}&cx=${config.customSearchEngineId}&num=1`;
+      const response = await fetch(url);
+
+      if (response.ok) {
+        log.success('Custom Search Engine: Valid (credentials authenticated)');
+      } else {
+        const errorText = await response.text();
+        log.error(`Custom Search Engine: Failed (HTTP ${response.status}: ${errorText})`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      log.error(`Custom Search Engine: Failed (${message})`);
+    }
   }
 
   if (!config.indexnowKey && !config.googleServiceAccountPath && !config.bingApiKey && !config.customSearchApiKey) {

@@ -1,60 +1,32 @@
 # Strategic Audit — seo-pilot
 
-## Red Team Critique
+## MOMENTUM & ZOMBIES
 
-### 1. CRITICAL: `.env.local` is written but never loaded (show-stopper)
+**Momentum**: Extremely high. 10 commits in one sprint, 2,500 LOC source + 3,500 LOC tests, all 6 commands built, 145 tests green, typecheck clean, red-team hardened. The skeleton is complete.
 
-**Files:** `src/commands/setup.ts:283-291`, `src/config/loader.ts`
+**Zombie Features** (code exists but isn't shipping):
 
-The setup wizard writes secrets to `.env.local` (Bing API key, Custom Search credentials) and references them in `seo-pilot.config.json` as `${BING_API_KEY}`, `${CUSTOM_SEARCH_API_KEY}`, etc. But **nothing in the codebase reads `.env.local` into `process.env`**. There is no `dotenv` dependency, no manual file read, nothing.
+1. **`discover` command directory queries are hardcoded to bmtgradweek.com's military niche.** Lines 14-21 of `discover.ts` contain literal strings like `"military family resources"`, `"JBSA" OR "Lackland"`, `"BMT graduation"`. The plan says "site-agnostic by design" — this violates it. A user configuring for a cooking blog gets military family directory results. The forum mode IS site-agnostic (it uses config keywords), but directory mode is a zombie that only works for one site.
 
-The result: a user completes the wizard, sees "Setup Complete!", runs `seo-pilot index`, and immediately gets:
+2. **`setup` wizard `validateApis()` is a no-op.** Lines 294-320 check if config values are truthy and print "Configured" — zero actual API calls. It says "Validating API Configuration" but validates nothing. A user with a wrong API key sees green checkmarks.
 
-```
-✗ Index command failed: Environment variable "BING_API_KEY" is not set but referenced in config
-```
+3. **Build output is untested.** `tsc` compiles to `dist/` but nobody has verified `node dist/cli.js --help` works. The `bin` field in package.json points to `./dist/cli.js` but the shebang `#!/usr/bin/env node` only exists in the TypeScript source — need to verify it survives compilation.
 
-This breaks the entire workflow the setup wizard promises. The config loader's `substituteEnvVars` substitutes from `process.env` only — `.env.local` files are not part of Node's `process.env` unless something explicitly loads them.
+4. **No CLAUDE.md for this repo.** Every other repo in the workspace has one. New contributors (or future Claude sessions) get no architectural context.
 
-**Fix:** The config loader must read `.env.local` (if it exists) and merge into `process.env` before substitution. Or stop using env var references and inline secrets directly (worse for security). No new deps needed — just read the file and parse `KEY=VALUE` lines.
+## THE GAP
 
-### 2. HIGH: Google auth token cache is scope-unaware
+**The `discover` command is architecturally broken for any site except bmtgradweek.com.**
 
-**File:** `src/auth/google.ts:20-30`
+This is the only command that violates the site-agnostic principle. Every other command derives its behavior from config (sitemap URLs, keywords, API keys). But `discover --type directories` has 6 hardcoded query templates that reference "military family", "Air Force graduation", "JBSA", "Lackland", "BMT". These are meaningless for any other domain.
 
-The token cache is a single module-level `let tokenCache: CachedToken | null`. It stores one token regardless of which scopes were requested. Different commands need different scopes:
+This also blocks the CI integration story — you can't publish `seo-pilot` as a generic tool on npm when one of its commands is welded to a single niche.
 
-- `index` → scope: `auth/indexing`
-- `inspect`, `rank` → scope: `auth/webmasters`
+The fix is architectural: directory discovery queries must be config-driven, with intelligent defaults generated from the site's keywords. The config schema needs a `discover.directoryQueries` field, and the setup wizard should auto-generate niche-relevant queries from the user's keyword list.
 
-If code ever calls `getGoogleAccessToken` with `indexing` scope, then calls it again with `webmasters` scope (e.g., a future pipeline, or the `index` command's Google submission followed by another command), the cached token from the first call is returned — **with the wrong scope**. Google will return 403 Forbidden.
+## THE BATTLE PLAN
 
-Currently mitigated because each CLI invocation is a separate process. But this is a latent bug that will bite as soon as anyone imports these modules programmatically or adds a combined command.
-
-**Fix:** Key the cache by the scope string (use a `Map<string, CachedToken>`).
-
-### 3. HIGH: Search Console keyword filter uses AND instead of OR
-
-**File:** `src/apis/google-search-console.ts:54-64`
-
-When multiple keywords are passed, they're all placed in a single `dimensionFilterGroups[0].filters` array. Google's API applies AND logic within a filter group — meaning it returns rows matching ALL keywords simultaneously. Since a single search query can't equal "BMT graduation" AND "Lackland" at the same time, this returns **zero results**.
-
-The config has 6 keywords. Running `seo-pilot rank` without `--keyword` passes all 6 to this filter, which guarantees an empty result set. Users will see "No performance data found" and think their site has no traffic.
-
-**Fix:** Either use separate filter groups (one per keyword with OR semantics), or make individual API calls per keyword, or remove the filter entirely when all config keywords are requested (let the API return everything).
-
-### Honorable Mentions
-
-- **`(error as any).status`** in `google-inspection.ts:62` and `requestBody: any` in `google-search-console.ts:46` violate the "no `any`" rule.
-- **`sitemap.ts:2`** doesn't check `response.ok` — a 404 sitemap silently returns empty/garbage URLs.
-- **`appendHistory` read-then-write** is not atomic — concurrent processes can clobber each other's history.
-- **`process.exit(1)` scattered through commands** prevents cleanup and makes programmatic use impossible.
-
-## Deployment Checklist
-
-Remaining steps to take seo-pilot from "started" to "shippable":
-
-- [x] **Fix scope-unaware token cache** — Keyed cache by sorted scope string via `Map<string, CachedToken>`.
-- [x] **Fix keyword filter AND→OR** — Uses `includingRegex` with pipe-joined keywords for OR semantics in a single API call.
-- [x] **Eliminate `any` types + fix sitemap error handling** — Replaced `as any` casts with `Object.assign`, typed `requestBody` inline, added `response.ok` check to sitemap fetcher.
-- [x] **Final verification** — 145/145 tests pass, typecheck clean, `tsc` build succeeds, `--help` and `--version` work correctly.
+- [ ] **1. Make discover site-agnostic** — Add `discover.directoryQueries` to config schema. Generate queries from keywords using templates like `"{keyword}" + "resources" OR "directory"`. Remove all hardcoded military strings. Update tests.
+- [ ] **2. Make setup validation real** — `validateApis()` should make lightweight test calls: IndexNow key file fetch, Google token exchange, Bing API ping, Custom Search test query. Report actual pass/fail.
+- [ ] **3. Verify build pipeline** — Test `node dist/cli.js --help` works after `tsc`. Verify shebang survives. Add `prepublishOnly` script.
+- [ ] **4. Add repo CLAUDE.md** — Architecture overview, test commands, deploy strategy, conventions.

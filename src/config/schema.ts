@@ -27,6 +27,7 @@ export const ConfigSchema = z.object({
   discover: z.object({
     sites: z.array(z.string()).default(['reddit.com', 'quora.com']),
     resultsPerKeyword: z.number().int().positive().default(5),
+    directoryQueries: z.array(z.string()).optional(),
   }).default({}),
 });
 

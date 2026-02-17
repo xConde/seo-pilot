@@ -11,14 +11,36 @@ interface DiscoverHistoryEntry {
   [key: string]: unknown;
 }
 
-const DIRECTORY_QUERIES = [
-  '"military family resources" + "submit" OR "add your site"',
-  '"Air Force" "graduation" "resources" "links"',
-  '"military spouse" "directory" OR "resource list"',
-  '"JBSA" OR "Lackland" "resources" "links"',
-  '"best military family websites"',
-  '"BMT graduation" "helpful links" OR "useful resources"',
+/**
+ * Generate directory discovery queries from keywords.
+ * Templates produce niche-relevant queries for any domain.
+ */
+const DIRECTORY_TEMPLATES = [
+  (kw: string) => `"${kw}" + "resources" OR "directory"`,
+  (kw: string) => `"${kw}" + "submit" OR "add your site"`,
+  (kw: string) => `"${kw}" + "helpful links" OR "useful resources"`,
+  (kw: string) => `"best" "${kw}" websites`,
 ];
+
+function buildDirectoryQueries(keywords: string[], customQueries?: string[]): string[] {
+  // If user provided explicit queries in config, use those
+  if (customQueries && customQueries.length > 0) {
+    return customQueries;
+  }
+
+  // Otherwise generate from keywords using templates
+  if (keywords.length === 0) {
+    return [];
+  }
+
+  const queries: string[] = [];
+  for (const kw of keywords) {
+    for (const template of DIRECTORY_TEMPLATES) {
+      queries.push(template(kw));
+    }
+  }
+  return queries;
+}
 
 async function getDedupedUrls(cutoffDays: number): Promise<Set<string>> {
   const history = await readHistory<DiscoverHistoryEntry>('discover-history.json');
@@ -152,9 +174,22 @@ export async function runDiscover(
       }
       log.info('Running discovery for directories...');
 
+      const keywords = keywordFilter
+        ? config.keywords.filter((k) => k === keywordFilter)
+        : config.keywords;
+
+      const directoryQueries = buildDirectoryQueries(
+        keywords,
+        config.discover.directoryQueries
+      );
+
+      if (directoryQueries.length === 0) {
+        log.warn('No keywords configured — skipping directory discovery');
+      }
+
       const directoryResults: Array<SearchResult & { type: string }> = [];
 
-      for (const query of DIRECTORY_QUERIES) {
+      for (const query of directoryQueries) {
         if (totalCalls >= quota) {
           log.warn(`Approaching Custom Search quota (${quota}/day) - stopping`);
           break;

@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/ tests/"
+    "lint": "eslint src/ tests/",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=20"

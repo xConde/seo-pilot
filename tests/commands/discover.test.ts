@@ -8,6 +8,9 @@ vi.mock('../../src/config/loader.js');
 vi.mock('../../src/apis/google-custom-search.js');
 vi.mock('../../src/state/history.js');
 
+// Test the buildDirectoryQueries function by importing and testing it
+// Since it's not exported, we'll test it indirectly through the discover command
+
 describe('discover command', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,7 +37,7 @@ describe('discover command', () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',
       site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
-      keywords: ['military family'],
+      keywords: ['test keyword'],
       apis: {
         customSearch: { apiKey: 'test-key', engineId: 'test-engine' },
       },
@@ -55,7 +58,7 @@ describe('discover command', () => {
     await runDiscover({});
 
     expect(customSearchApi.customSearch).toHaveBeenCalledWith(
-      'site:reddit.com "military family"',
+      'site:reddit.com "test keyword"',
       'test-key',
       'test-engine',
       { num: 5 }
@@ -66,7 +69,7 @@ describe('discover command', () => {
       expect.arrayContaining([
         expect.objectContaining({
           url: 'https://reddit.com/r/military/post1',
-          keyword: 'military family',
+          keyword: 'test keyword',
           type: 'forum',
         }),
       ])
@@ -77,7 +80,7 @@ describe('discover command', () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',
       site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
-      keywords: ['military family', 'BMT graduation'],
+      keywords: ['test keyword', 'another keyword'],
       apis: {
         customSearch: { apiKey: 'test-key', engineId: 'test-engine' },
       },
@@ -88,11 +91,11 @@ describe('discover command', () => {
     vi.mocked(history.appendHistory).mockResolvedValue();
     vi.mocked(customSearchApi.customSearch).mockResolvedValue([]);
 
-    await runDiscover({ keyword: 'BMT graduation' });
+    await runDiscover({ keyword: 'another keyword' });
 
     expect(customSearchApi.customSearch).toHaveBeenCalledTimes(1);
     expect(customSearchApi.customSearch).toHaveBeenCalledWith(
-      'site:reddit.com "BMT graduation"',
+      'site:reddit.com "another keyword"',
       'test-key',
       'test-engine',
       { num: 5 }
@@ -151,7 +154,87 @@ describe('discover command', () => {
     expect(Array.isArray(savedEntries) ? savedEntries : [savedEntries]).toHaveLength(1);
   });
 
-  it('should run directories mode', async () => {
+  it('should run directories mode with keywords', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: ['test'],
+      apis: {
+        customSearch: { apiKey: 'test-key', engineId: 'test-engine' },
+      },
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    vi.mocked(history.readHistory).mockResolvedValue([]);
+    vi.mocked(history.appendHistory).mockResolvedValue();
+
+    vi.mocked(customSearchApi.customSearch).mockResolvedValue([
+      {
+        url: 'https://example.com/directory',
+        title: 'Best Test Resources',
+        snippet: 'A roundup of the best test resources',
+      },
+    ]);
+
+    await runDiscover({ type: 'directories' });
+
+    // Should call customSearch 4 times (1 keyword × 4 templates)
+    expect(customSearchApi.customSearch).toHaveBeenCalledTimes(4);
+
+    // Verify it's using generated queries from templates
+    const calls = vi.mocked(customSearchApi.customSearch).mock.calls;
+    expect(calls[0][0]).toContain('test');
+    expect(calls[0][0]).toContain('resources');
+
+    expect(history.appendHistory).toHaveBeenCalledWith(
+      'discover-history.json',
+      expect.arrayContaining([
+        expect.objectContaining({
+          url: 'https://example.com/directory',
+          type: 'directory',
+        }),
+      ])
+    );
+  });
+
+  it('should use custom directory queries when provided', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: ['test'],
+      apis: {
+        customSearch: { apiKey: 'test-key', engineId: 'test-engine' },
+      },
+      discover: {
+        sites: [],
+        resultsPerKeyword: 5,
+        directoryQueries: ['custom query 1', 'custom query 2'],
+      },
+    });
+
+    vi.mocked(history.readHistory).mockResolvedValue([]);
+    vi.mocked(history.appendHistory).mockResolvedValue();
+    vi.mocked(customSearchApi.customSearch).mockResolvedValue([]);
+
+    await runDiscover({ type: 'directories' });
+
+    // Should use custom queries instead of generated ones
+    expect(customSearchApi.customSearch).toHaveBeenCalledTimes(2);
+    expect(customSearchApi.customSearch).toHaveBeenCalledWith(
+      'custom query 1',
+      'test-key',
+      'test-engine',
+      { num: 5 }
+    );
+    expect(customSearchApi.customSearch).toHaveBeenCalledWith(
+      'custom query 2',
+      'test-key',
+      'test-engine',
+      { num: 5 }
+    );
+  });
+
+  it('should warn when no keywords configured for directories', async () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',
       site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
@@ -165,28 +248,10 @@ describe('discover command', () => {
     vi.mocked(history.readHistory).mockResolvedValue([]);
     vi.mocked(history.appendHistory).mockResolvedValue();
 
-    vi.mocked(customSearchApi.customSearch).mockResolvedValue([
-      {
-        url: 'https://example.com/directory',
-        title: 'Best Military Resources',
-        snippet: 'A roundup of the best military family resources',
-      },
-    ]);
-
     await runDiscover({ type: 'directories' });
 
-    // Should call customSearch multiple times for directory queries
-    expect(customSearchApi.customSearch).toHaveBeenCalled();
-
-    expect(history.appendHistory).toHaveBeenCalledWith(
-      'discover-history.json',
-      expect.arrayContaining([
-        expect.objectContaining({
-          url: 'https://example.com/directory',
-          type: 'directory',
-        }),
-      ])
-    );
+    // Should not call customSearch when no keywords
+    expect(customSearchApi.customSearch).not.toHaveBeenCalled();
   });
 
   it('should run both modes when type is all', async () => {
