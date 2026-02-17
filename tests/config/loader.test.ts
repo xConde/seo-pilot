@@ -120,6 +120,84 @@ describe('loadConfig', () => {
     );
   });
 
+  it('loads .env.local from config directory before substitution', () => {
+    // Write .env.local alongside config
+    const envPath = join(TEST_DIR, '.env.local');
+    writeFileSync(envPath, 'MY_SECRET_KEY=loaded-from-env-file\n');
+
+    const config = {
+      version: '1.0.0',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${MY_SECRET_KEY}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('loaded-from-env-file');
+
+    // Cleanup: remove from process.env so it doesn't leak
+    delete process.env.MY_SECRET_KEY;
+  });
+
+  it('does not overwrite existing env vars with .env.local values', () => {
+    vi.stubEnv('EXISTING_VAR', 'from-environment');
+
+    const envPath = join(TEST_DIR, '.env.local');
+    writeFileSync(envPath, 'EXISTING_VAR=from-env-file\n');
+
+    const config = {
+      version: '1.0.0',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${EXISTING_VAR}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Explicit env var wins over .env.local
+    expect(result.apis.indexnow?.key).toBe('from-environment');
+  });
+
+  it('skips comments and blank lines in .env.local', () => {
+    const envPath = join(TEST_DIR, '.env.local');
+    writeFileSync(envPath, '# This is a comment\n\nENV_TEST_VAR=works\n');
+
+    const config = {
+      version: '1.0.0',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${ENV_TEST_VAR}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('works');
+
+    delete process.env.ENV_TEST_VAR;
+  });
+
   it('uses default path when no path is provided', () => {
     const defaultPath = join(process.cwd(), 'seo-pilot.config.json');
     const config = {

@@ -1,6 +1,31 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { ConfigSchema, type Config } from './schema.js';
+
+/**
+ * Loads a .env.local file (KEY=VALUE lines) into process.env.
+ * Skips comments, blank lines, and already-set vars (process.env takes precedence).
+ */
+function loadEnvFile(envPath: string): void {
+  if (!existsSync(envPath)) return;
+
+  const content = readFileSync(envPath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = trimmed.slice(eqIndex + 1).trim();
+
+    // Don't overwrite existing env vars — explicit env always wins
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 
 /**
  * Recursively substitutes ${VAR} patterns in string values with environment variables.
@@ -40,6 +65,10 @@ function substituteEnvVars(obj: unknown): unknown {
  */
 export function loadConfig(path?: string): Config {
   const configPath = resolve(path ?? 'seo-pilot.config.json');
+
+  // Load .env.local from same directory as config file before substitution
+  const configDir = dirname(configPath);
+  loadEnvFile(resolve(configDir, '.env.local'));
 
   let fileContent: string;
   try {
