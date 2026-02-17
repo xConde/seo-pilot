@@ -19,6 +19,11 @@ interface CachedToken {
 
 const tokenCache = new Map<string, CachedToken>();
 
+/** Clear the token cache. Exported for testing. */
+export function clearTokenCache(): void {
+  tokenCache.clear();
+}
+
 export async function getGoogleAccessToken(
   serviceAccountPath: string,
   scopes: string[]

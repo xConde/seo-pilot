@@ -231,7 +231,7 @@ async function writeConfigFiles(config: SetupConfig): Promise<void> {
 
   // Build config object
   const configObj: Record<string, unknown> = {
-    version: '1.0.0',
+    version: '1',
     site: {
       url: config.siteUrl,
       sitemap: config.sitemapUrl,
@@ -260,10 +260,10 @@ async function writeConfigFiles(config: SetupConfig): Promise<void> {
   // Bing
   if (config.bingApiKey) {
     (configObj.apis as Record<string, unknown>).bing = {
-      apiKey: '${BING_API_KEY}',
+      apiKey: '${BING_WEBMASTER_API_KEY}',
       siteUrl: config.siteUrl,
     };
-    envVars.BING_API_KEY = config.bingApiKey;
+    envVars.BING_WEBMASTER_API_KEY = config.bingApiKey;
   }
 
   // Custom Search
@@ -329,19 +329,12 @@ async function validateApis(config: SetupConfig): Promise<void> {
     }
   }
 
-  // Bing - validate API key with test URL submission
+  // Bing - validate API key with read-only query stats endpoint
   if (config.bingApiKey) {
     try {
-      const endpoint = `https://ssl.bing.com/webmaster/api.svc/json/SubmitUrl?apikey=${config.bingApiKey}`;
+      const endpoint = `https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?apikey=${config.bingApiKey}&siteUrl=${encodeURIComponent(config.siteUrl)}`;
       const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          siteUrl: config.siteUrl,
-          url: config.siteUrl,
-        }),
+        method: 'GET',
       });
 
       if (response.ok) {

@@ -7,7 +7,7 @@ describe('submitBingUrls', () => {
     vi.unstubAllGlobals();
   });
 
-  it('should submit URLs successfully', async () => {
+  it('should submit URLs successfully with concurrency', async () => {
     const urls = ['https://example.com/page1', 'https://example.com/page2'];
     const apiKey = 'test_api_key';
     const siteUrl = 'https://example.com';

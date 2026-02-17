@@ -30,20 +30,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
         const key = arg.slice(2);
         const nextArg = argv[i + 1];
 
-        // After command, flags can consume values only if:
-        // - We haven't seen the command yet (pre-command flags), OR
-        // - Next arg exists, doesn't start with --, and comes before any more flags
-        // Actually, let's use simpler rule: only consume if before command OR if next arg clearly isn't positional
-        if (!foundCommand && nextArg && !nextArg.startsWith('--')) {
-          flags[key] = nextArg;
-          skipNext = true;
-        } else if (
-          foundCommand &&
-          nextArg &&
-          !nextArg.startsWith('--') &&
-          !nextArg.includes('/')  && // Heuristic: paths likely positionals
-          !nextArg.includes('.') // Heuristic: files likely positionals
-        ) {
+        // Consume next arg as flag value if it exists and isn't another flag
+        if (nextArg && !nextArg.startsWith('--')) {
           flags[key] = nextArg;
           skipNext = true;
         } else {

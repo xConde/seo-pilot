@@ -156,16 +156,19 @@ async function auditSitemap(sitemapUrl: string): Promise<CheckResult> {
 
     const text = await response.text();
 
-    // Check if well-formed XML
-    if (!text.includes('<?xml') || !text.includes('</urlset>')) {
+    // Check if well-formed XML (supports both urlset and sitemapindex)
+    if (!text.includes('<?xml') || (!text.includes('</urlset>') && !text.includes('</sitemapindex>'))) {
       messages.push('Sitemap is not well-formed XML');
       status = 'warn';
     } else {
       messages.push('Sitemap is well-formed');
     }
 
-    // Extract URLs
-    const urls = await fetchSitemapUrls(sitemapUrl);
+    // Extract URLs from the fetched text (avoid re-fetching)
+    const urlRegex = /<loc>(.*?)<\/loc>/g;
+    const urls = Array.from(text.matchAll(urlRegex))
+      .map((match) => match[1])
+      .filter((url): url is string => !!url);
     messages.push(`Sitemap contains ${urls.length} URLs`);
 
     // Sample up to 10 URLs to check they return 200

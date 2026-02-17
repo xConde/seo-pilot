@@ -23,6 +23,9 @@ describe('getGoogleAccessToken', () => {
     vi.unstubAllGlobals();
     // Reset module to clear cache
     vi.resetModules();
+    // Clear token cache to prevent cross-test contamination
+    const { clearTokenCache } = await import('../../src/auth/google.js');
+    clearTokenCache();
   });
 
   afterEach(() => {

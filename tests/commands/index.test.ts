@@ -102,12 +102,14 @@ describe('runIndex', () => {
     );
     expect(appendHistory).toHaveBeenCalledWith(
       'index-history.json',
-      expect.objectContaining({
-        service: 'indexnow',
-        urlCount: 3,
-        success: true,
-        errors: [],
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: 'indexnow',
+          urlCount: 3,
+          success: true,
+          errors: [],
+        })
+      ])
     );
     expect(log.success).toHaveBeenCalledWith(
       'All submissions completed successfully'
@@ -138,11 +140,13 @@ describe('runIndex', () => {
 
     expect(appendHistory).toHaveBeenCalledWith(
       'index-history.json',
-      expect.objectContaining({
-        service: 'indexnow',
-        success: false,
-        errors: ['API Error: 500'],
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: 'indexnow',
+          success: false,
+          errors: ['API Error: 500'],
+        })
+      ])
     );
     expect(log.error).toHaveBeenCalledWith('Some submissions failed:');
     expect(log.error).toHaveBeenCalledWith('  API Error: 500');
@@ -200,12 +204,15 @@ describe('runIndex', () => {
 
     expect(appendHistory).toHaveBeenCalledWith(
       'index-history.json',
-      expect.objectContaining({
-        timestamp: expect.any(String),
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          timestamp: expect.any(String),
+        })
+      ])
     );
 
-    const historyEntry = vi.mocked(appendHistory).mock.calls[0][1];
+    const historyEntries = vi.mocked(appendHistory).mock.calls[0][1];
+    const historyEntry = Array.isArray(historyEntries) ? historyEntries[0] : historyEntries;
     expect(historyEntry.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(historyEntry.timestamp >= beforeTime).toBe(true);
     expect(historyEntry.timestamp <= afterTime).toBe(true);
@@ -254,12 +261,14 @@ describe('runIndex', () => {
     expect(submitGoogleIndexing).toHaveBeenCalledWith(mockUrls, 'mock_token');
     expect(appendHistory).toHaveBeenCalledWith(
       'index-history.json',
-      expect.objectContaining({
-        service: 'google',
-        urlCount: 3,
-        success: true,
-        errors: [],
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: 'google',
+          urlCount: 3,
+          success: true,
+          errors: [],
+        })
+      ])
     );
   });
 
@@ -291,12 +300,14 @@ describe('runIndex', () => {
     );
     expect(appendHistory).toHaveBeenCalledWith(
       'index-history.json',
-      expect.objectContaining({
-        service: 'bing',
-        urlCount: 3,
-        success: true,
-        errors: [],
-      })
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: 'bing',
+          urlCount: 3,
+          success: true,
+          errors: [],
+        })
+      ])
     );
   });
 

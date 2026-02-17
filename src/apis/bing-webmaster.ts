@@ -13,19 +13,28 @@ export async function submitBingUrls(
 ): Promise<BingSubmitResult> {
   const errors: string[] = [];
   let successCount = 0;
+  const concurrency = 5;
 
-  // Submit each URL individually
-  for (const url of urls) {
-    try {
-      await withRetry(
-        () => submitSingleUrl(url, apiKey, siteUrl),
-        { maxRetries: 3, baseDelayMs: 1000 }
-      );
-      successCount++;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      errors.push(`URL ${url}: ${message}`);
-    }
+  // Process in chunks of `concurrency`
+  for (let i = 0; i < urls.length; i += concurrency) {
+    const chunk = urls.slice(i, i + concurrency);
+    const results = await Promise.allSettled(
+      chunk.map((url) =>
+        withRetry(
+          () => submitSingleUrl(url, apiKey, siteUrl),
+          { maxRetries: 3, baseDelayMs: 1000 }
+        )
+      )
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        successCount++;
+      } else {
+        const message = result.reason instanceof Error ? result.reason.message : 'Unknown error';
+        errors.push(`URL ${chunk[index]}: ${message}`);
+      }
+    });
   }
 
   return {

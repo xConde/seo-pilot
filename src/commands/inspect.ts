@@ -123,9 +123,14 @@ export async function runInspect(
 
     // Report errors
     if (errors.length > 0) {
-      log.error(`Failed to inspect ${errors.length} URLs:`);
-      errors.forEach((err) => log.error(`  ${err}`));
-      process.exit(1);
+      if (results.length === 0) {
+        log.error(`All ${errors.length} URLs failed inspection:`);
+        errors.forEach((err) => log.error(`  ${err}`));
+        process.exit(1);
+      } else {
+        log.warn(`${errors.length} URLs failed inspection:`);
+        errors.forEach((err) => log.warn(`  ${err}`));
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

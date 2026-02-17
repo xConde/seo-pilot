@@ -18,7 +18,7 @@ describe('loadConfig', () => {
 
   it('loads a valid config file', () => {
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -28,7 +28,7 @@ describe('loadConfig', () => {
     writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
     const result = loadConfig(TEST_CONFIG_PATH);
 
-    expect(result.version).toBe('1.0.0');
+    expect(result.version).toBe('1');
     expect(result.site.url).toBe('https://example.com');
     expect(result.site.sitemap).toBe('https://example.com/sitemap.xml');
   });
@@ -38,7 +38,7 @@ describe('loadConfig', () => {
     vi.stubEnv('TEST_API_KEY', 'secret-key');
 
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: '${TEST_URL}',
         sitemap: '${TEST_URL}/sitemap.xml',
@@ -63,7 +63,7 @@ describe('loadConfig', () => {
     vi.stubEnv('KEYWORD_2', 'marketing');
 
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -79,7 +79,7 @@ describe('loadConfig', () => {
 
   it('throws error when environment variable is missing', () => {
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: '${MISSING_VAR}',
         sitemap: 'https://example.com/sitemap.xml',
@@ -109,7 +109,7 @@ describe('loadConfig', () => {
 
   it('throws error when config fails validation', () => {
     const invalidConfig = {
-      version: '1.0.0',
+      version: '1',
       // missing required site field
     };
 
@@ -126,7 +126,7 @@ describe('loadConfig', () => {
     writeFileSync(envPath, 'MY_SECRET_KEY=loaded-from-env-file\n');
 
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -154,7 +154,7 @@ describe('loadConfig', () => {
     writeFileSync(envPath, 'EXISTING_VAR=from-env-file\n');
 
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -178,7 +178,7 @@ describe('loadConfig', () => {
     writeFileSync(envPath, '# This is a comment\n\nENV_TEST_VAR=works\n');
 
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -201,7 +201,7 @@ describe('loadConfig', () => {
   it('uses default path when no path is provided', () => {
     const defaultPath = join(process.cwd(), 'seo-pilot.config.json');
     const config = {
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -212,7 +212,7 @@ describe('loadConfig', () => {
 
     try {
       const result = loadConfig();
-      expect(result.version).toBe('1.0.0');
+      expect(result.version).toBe('1');
     } finally {
       unlinkSync(defaultPath);
     }

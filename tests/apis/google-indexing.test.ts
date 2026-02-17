@@ -13,6 +13,9 @@ describe('submitGoogleIndexing', () => {
 
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
+      headers: {
+        get: (name: string) => name === 'content-type' ? 'multipart/mixed; boundary=batch_boundary' : null,
+      },
       text: async () => `--batch_boundary
 Content-Type: application/http
 
@@ -54,6 +57,9 @@ Content-Type: application/json
 
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
+      headers: {
+        get: (name: string) => name === 'content-type' ? 'multipart/mixed; boundary=batch_boundary' : null,
+      },
       text: async () => `--batch_boundary
 Content-Type: application/http
 
@@ -96,6 +102,9 @@ Content-Type: application/json
       }
       return {
         ok: true,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'multipart/mixed; boundary=batch_boundary' : null,
+        },
         text: async () => `--batch_boundary
 Content-Type: application/http
 
@@ -140,6 +149,9 @@ Content-Type: application/json
       ).join('\n');
       return {
         ok: true,
+        headers: {
+          get: (name: string) => name === 'content-type' ? 'multipart/mixed; boundary=batch_boundary' : null,
+        },
         text: async () => responses + '\n--batch_boundary--',
       };
     });

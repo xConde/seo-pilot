@@ -33,7 +33,7 @@ describe('parseArgs', () => {
   });
 
   it('handles mixed flags and positionals', () => {
-    const result = parseArgs(['build', '--verbose', 'src/', '--output=dist', 'main.ts']);
+    const result = parseArgs(['build', '--output=dist', 'src/', 'main.ts', '--verbose']);
     expect(result.command).toBe('build');
     expect(result.flags).toEqual({ verbose: true, output: 'dist' });
     expect(result.positionals).toEqual(['src/', 'main.ts']);
@@ -43,5 +43,35 @@ describe('parseArgs', () => {
     const result = parseArgs(['--verbose', '--debug']);
     expect(result.command).toBe('');
     expect(result.positionals).toEqual([]);
+  });
+
+  it('parses URL flag values with slashes', () => {
+    const result = parseArgs(['inspect', '--url', 'https://example.com/page']);
+    expect(result.command).toBe('inspect');
+    expect(result.flags).toEqual({ url: 'https://example.com/page' });
+  });
+
+  it('parses file path flag values with slashes and dots', () => {
+    const result = parseArgs(['index', '--config', './path/to/config.json']);
+    expect(result.command).toBe('index');
+    expect(result.flags).toEqual({ config: './path/to/config.json' });
+  });
+
+  it('parses multiple flags with URL and string values', () => {
+    const result = parseArgs(['audit', '--url', 'https://example.com', '--checks', 'meta,schema']);
+    expect(result.command).toBe('audit');
+    expect(result.flags).toEqual({ url: 'https://example.com', checks: 'meta,schema' });
+  });
+
+  it('handles boolean flag followed by string flag', () => {
+    const result = parseArgs(['index', '--dry-run', '--service', 'google']);
+    expect(result.command).toBe('index');
+    expect(result.flags).toEqual({ 'dry-run': true, service: 'google' });
+  });
+
+  it('handles multiple boolean flags', () => {
+    const result = parseArgs(['index', '--dry-run', '--verbose']);
+    expect(result.command).toBe('index');
+    expect(result.flags).toEqual({ 'dry-run': true, verbose: true });
   });
 });

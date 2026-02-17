@@ -179,7 +179,7 @@ describe('runInspect', () => {
     );
   });
 
-  it('should handle errors for individual URLs', async () => {
+  it('should handle errors for individual URLs (partial failure)', async () => {
     vi.mocked(inspectUrl)
       .mockResolvedValueOnce({
         url: 'https://example.com/page1',
@@ -190,12 +190,22 @@ describe('runInspect', () => {
       })
       .mockRejectedValueOnce(new Error('API Error: 403 Forbidden'));
 
-    await expect(runInspect({})).rejects.toThrow('process.exit(1)');
+    await runInspect({});
 
     expect(log.error).toHaveBeenCalledWith(
       'Failed to inspect https://example.com/page2: API Error: 403 Forbidden'
     );
-    expect(log.error).toHaveBeenCalledWith('Failed to inspect 1 URLs:');
+    expect(log.warn).toHaveBeenCalledWith('1 URLs failed inspection:');
+  });
+
+  it('should exit 1 when all URLs fail', async () => {
+    vi.mocked(inspectUrl)
+      .mockRejectedValueOnce(new Error('API Error: 403 Forbidden'))
+      .mockRejectedValueOnce(new Error('API Error: 500 Server Error'));
+
+    await expect(runInspect({})).rejects.toThrow('process.exit(1)');
+
+    expect(log.error).toHaveBeenCalledWith('All 2 URLs failed inspection:');
   });
 
   it('should warn when no URLs to inspect', async () => {

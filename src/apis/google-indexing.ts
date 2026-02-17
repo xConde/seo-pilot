@@ -93,9 +93,14 @@ async function submitBatch(
     });
   }
 
+  // Extract boundary from Content-Type header
+  const contentType = response.headers.get('content-type') ?? '';
+  const boundaryMatch = contentType.match(/boundary=(.+)/);
+  const responseBoundary = boundaryMatch?.[1] ?? 'batch_boundary';
+
   // Parse multipart response
   const responseText = await response.text();
-  const items = parseMultipartResponse(responseText);
+  const items = parseMultipartResponse(responseText, responseBoundary);
 
   items.forEach((item, index) => {
     if (item.statusCode && item.statusCode >= 200 && item.statusCode < 300) {
@@ -110,9 +115,9 @@ async function submitBatch(
   return { successCount, errors };
 }
 
-function parseMultipartResponse(responseText: string): BatchItem[] {
+function parseMultipartResponse(responseText: string, boundary: string): BatchItem[] {
   const items: BatchItem[] = [];
-  const parts = responseText.split(/--batch_\w+/);
+  const parts = responseText.split(`--${boundary}`);
 
   for (const part of parts) {
     if (!part.trim() || part.trim() === '--') continue;

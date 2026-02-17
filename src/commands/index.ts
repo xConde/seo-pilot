@@ -71,9 +71,6 @@ export async function runIndex(
         if (result.error) {
           errors.push(result.error);
         }
-
-        // Save to history
-        await appendHistory('index-history.json', entry);
       } else {
         log.warn('IndexNow not configured, skipping');
       }
@@ -101,9 +98,6 @@ export async function runIndex(
 
           results.push(entry);
           errors.push(...result.errors);
-
-          // Save to history
-          await appendHistory('index-history.json', entry);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Unknown error';
@@ -137,9 +131,6 @@ export async function runIndex(
 
           results.push(entry);
           errors.push(...result.errors);
-
-          // Save to history
-          await appendHistory('index-history.json', entry);
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Unknown error';
@@ -161,6 +152,9 @@ export async function runIndex(
         r.success ? 'Success' : 'Failed',
       ]);
       log.table(headers, rows);
+
+      // Save all results to history
+      await appendHistory('index-history.json', results);
 
       const allSuccessful = results.every((r) => r.success);
       if (allSuccessful) {

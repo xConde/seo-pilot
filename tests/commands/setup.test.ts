@@ -89,14 +89,14 @@ describe('setup command', () => {
     // Verify config file was written
     expect(mockWriteFile).toHaveBeenCalledWith(
       expect.stringContaining('seo-pilot.config.json'),
-      expect.stringContaining('"version": "1.0.0"'),
+      expect.stringContaining('"version": "1"'),
       'utf-8'
     );
 
     // Verify .env.local was written
     expect(mockWriteFile).toHaveBeenCalledWith(
       expect.stringContaining('.env.local'),
-      expect.stringContaining('BING_API_KEY=bing-api-key-123'),
+      expect.stringContaining('BING_WEBMASTER_API_KEY=bing-api-key-123'),
       'utf-8'
     );
 
@@ -208,7 +208,7 @@ describe('setup command', () => {
     const config = JSON.parse(configContent);
 
     expect(config).toMatchObject({
-      version: '1.0.0',
+      version: '1',
       site: {
         url: 'https://example.com',
         sitemap: 'https://example.com/sitemap.xml',
@@ -307,7 +307,7 @@ describe('setup command', () => {
       expect(mockReadline.close).toHaveBeenCalled();
     });
 
-    it('validates Bing API key by submitting test URL', async () => {
+    it('validates Bing API key using GetQueryStats endpoint', async () => {
       const mockWriteFile = vi.mocked((await import('node:fs/promises')).writeFile);
 
       const answers = [
@@ -334,7 +334,9 @@ describe('setup command', () => {
         if (url.includes('bing.com/webmaster/api.svc')) {
           bingApiCalled = true;
           expect(url).toContain('bing-api-key-123');
-          expect(options?.method).toBe('POST');
+          expect(url).toContain('GetQueryStats');
+          expect(url).toContain(encodeURIComponent('https://example.com'));
+          expect(options?.method).toBe('GET');
           return Promise.resolve({ ok: true, status: 200 });
         }
         return Promise.resolve({ ok: false, status: 404 });

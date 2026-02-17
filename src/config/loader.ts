@@ -5,6 +5,9 @@ import { ConfigSchema, type Config } from './schema.js';
 /**
  * Loads a .env.local file (KEY=VALUE lines) into process.env.
  * Skips comments, blank lines, and already-set vars (process.env takes precedence).
+ *
+ * Note: This mutates process.env for the lifetime of the process. For production CLI usage,
+ * this is fine (the process exits after one command). For tests, ensure cleanup in afterEach.
  */
 function loadEnvFile(envPath: string): void {
   if (!existsSync(envPath)) return;
