@@ -30,3 +30,13 @@ The fix is architectural: directory discovery queries must be config-driven, wit
 - [ ] **2. Make setup validation real** — `validateApis()` should make lightweight test calls: IndexNow key file fetch, Google token exchange, Bing API ping, Custom Search test query. Report actual pass/fail.
 - [ ] **3. Verify build pipeline** — Test `node dist/cli.js --help` works after `tsc`. Verify shebang survives. Add `prepublishOnly` script.
 - [ ] **4. Add repo CLAUDE.md** — Architecture overview, test commands, deploy strategy, conventions.
+
+## Red Team Critique (Post-Hardening)
+
+Three bugs introduced by the hardening commit itself:
+
+1. **Boundary regex captures trailing Content-Type params (CRITICAL).** `google-indexing.ts` line 96: `/boundary=(.+)/` matches `batch_abc123; charset=utf-8` instead of just `batch_abc123`. The multipart split will never find the boundary in the response body. The fix we shipped for the hardcoded boundary regex is itself broken — we swapped one fragile regex for another.
+
+2. **Bing concurrent retries amplify 429 storms (MEDIUM).** `bing-webmaster.ts`: 5 concurrent requests each with independent `withRetry`. If all 5 get rate-limited, all 5 retry simultaneously at the same backoff intervals — 20 wasted requests in 7 seconds. Concurrency without shared backoff is worse than sequential.
+
+3. **Audit sitemap URL count wrong for sitemap indexes (LOW-MEDIUM).** `audit.ts` line 163: inline `<loc>` regex replaced the recursive `fetchSitemapUrls()` call. For sitemap indexes, `<loc>` values are child sitemap URLs, not page URLs. The reported count is wrong. We fixed the double-fetch but regressed the accuracy.

@@ -95,7 +95,7 @@ async function submitBatch(
 
   // Extract boundary from Content-Type header
   const contentType = response.headers.get('content-type') ?? '';
-  const boundaryMatch = contentType.match(/boundary=(.+)/);
+  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
   const responseBoundary = boundaryMatch?.[1] ?? 'batch_boundary';
 
   // Parse multipart response

@@ -124,6 +124,35 @@ Content-Type: application/json
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
+  it('should extract boundary from Content-Type with trailing params', async () => {
+    const urls = ['https://example.com/page1'];
+    const accessToken = 'mock_access_token';
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name === 'content-type'
+            ? 'multipart/mixed; boundary=batch_foXbar123; charset=UTF-8'
+            : null,
+      },
+      text: async () => `--batch_foXbar123
+Content-Type: application/http
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"urlNotificationMetadata":{"url":"https://example.com/page1"}}
+--batch_foXbar123--`,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await submitGoogleIndexing(urls, accessToken);
+
+    expect(result.success).toBe(true);
+    expect(result.urlCount).toBe(1);
+  });
+
   it('should handle multiple batches', async () => {
     // Create 150 URLs to trigger multiple batches (100 per batch)
     const urls = Array.from(
