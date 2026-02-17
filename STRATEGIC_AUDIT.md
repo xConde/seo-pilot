@@ -54,7 +54,7 @@ The config has 6 keywords. Running `seo-pilot rank` without `--keyword` passes a
 
 Remaining steps to take seo-pilot from "started" to "shippable":
 
-- [ ] **Fix scope-unaware token cache** — Key cache by scope string so different commands don't cross-contaminate auth tokens.
-- [ ] **Fix keyword filter AND→OR** — Search Console keyword filter returns zero results with multiple keywords. Use separate filter groups or individual API calls.
-- [ ] **Eliminate `any` types + fix sitemap error handling** — Remove `(error as any).status` patterns, type `requestBody` properly, add `response.ok` check to sitemap fetcher.
-- [ ] **Final verification** — Full test suite, typecheck, build (`tsc`), manual smoke test of `--help` and `--version`.
+- [x] **Fix scope-unaware token cache** — Keyed cache by sorted scope string via `Map<string, CachedToken>`.
+- [x] **Fix keyword filter AND→OR** — Uses `includingRegex` with pipe-joined keywords for OR semantics in a single API call.
+- [x] **Eliminate `any` types + fix sitemap error handling** — Replaced `as any` casts with `Object.assign`, typed `requestBody` inline, added `response.ok` check to sitemap fetcher.
+- [x] **Final verification** — 145/145 tests pass, typecheck clean, `tsc` build succeeds, `--help` and `--version` work correctly.
