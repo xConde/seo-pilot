@@ -43,6 +43,6 @@ Three bugs introduced by the hardening commit itself:
 
 ## Deployment Checklist
 
-- [ ] **1. Fix Bing 429 retry storm** — Replace independent per-URL retry with chunk-level backoff: if any request in a concurrent chunk gets 429, pause the entire chunk before retrying. Prevents amplifying rate limits.
-- [ ] **2. Fix audit sitemap index URL count** — Pass already-fetched text to a helper that detects sitemap index format and reports "X child sitemaps" vs "X page URLs". No second fetch.
-- [ ] **3. Final verification** — typecheck, 161+ tests green, `npm run build && node dist/cli.js --help`, smoke test.
+- [x] **1. Fix Bing 429 retry storm** — Chunk-level backoff: on 429, pause entire chunk, retry only failed URLs. Non-429 errors fail immediately.
+- [x] **2. Fix audit sitemap index URL count** — Detect `<sitemapindex>` format, report "X child sitemaps" vs "X URLs". Skip HEAD sampling for child sitemaps.
+- [x] **3. Final verification** — 165 tests green, typecheck clean, `npm run build && node dist/cli.js --help` works, shebang preserved.
