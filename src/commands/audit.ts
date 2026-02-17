@@ -169,26 +169,34 @@ async function auditSitemap(sitemapUrl: string): Promise<CheckResult> {
     const urls = Array.from(text.matchAll(urlRegex))
       .map((match) => match[1])
       .filter((url): url is string => !!url);
-    messages.push(`Sitemap contains ${urls.length} URLs`);
 
-    // Sample up to 10 URLs to check they return 200
-    const samplesToCheck = urls.slice(0, Math.min(10, urls.length));
-    let validCount = 0;
+    // Detect sitemap index vs regular sitemap
+    const isSitemapIndex = text.includes('<sitemapindex');
 
-    for (const url of samplesToCheck) {
-      try {
-        const urlResponse = await fetch(url, { method: 'HEAD' });
-        if (urlResponse.ok) {
-          validCount++;
+    if (isSitemapIndex) {
+      messages.push(`Sitemap index references ${urls.length} child sitemaps`);
+    } else {
+      messages.push(`Sitemap contains ${urls.length} URLs`);
+
+      // Sample up to 10 URLs to check they return 200
+      const samplesToCheck = urls.slice(0, Math.min(10, urls.length));
+      let validCount = 0;
+
+      for (const url of samplesToCheck) {
+        try {
+          const urlResponse = await fetch(url, { method: 'HEAD' });
+          if (urlResponse.ok) {
+            validCount++;
+          }
+        } catch {
+          // Ignore errors, just count failures
         }
-      } catch {
-        // Ignore errors, just count failures
       }
-    }
 
-    messages.push(`${validCount}/${samplesToCheck.length} sampled URLs returned 200`);
-    if (validCount < samplesToCheck.length) {
-      status = 'warn';
+      messages.push(`${validCount}/${samplesToCheck.length} sampled URLs returned 200`);
+      if (validCount < samplesToCheck.length) {
+        status = 'warn';
+      }
     }
 
   } catch (error) {

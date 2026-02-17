@@ -425,4 +425,53 @@ describe('audit command', () => {
     expect(entries[0].results.links).toBeUndefined();
     expect(entries[0].results.sitemap).toBeUndefined();
   });
+
+  it('should detect sitemap index and not check child sitemap URLs', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    const sitemapIndexXml = `<?xml version="1.0" encoding="UTF-8"?>
+      <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <sitemap><loc>https://example.com/sitemap-posts.xml</loc></sitemap>
+        <sitemap><loc>https://example.com/sitemap-pages.xml</loc></sitemap>
+        <sitemap><loc>https://example.com/sitemap-categories.xml</loc></sitemap>
+      </sitemapindex>`;
+
+    vi.mocked(sitemap.fetchSitemapUrls).mockResolvedValue(['https://example.com/page1']);
+
+    const fetchCalls: string[] = [];
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      fetchCalls.push(url as string);
+      if (url === 'https://example.com/sitemap.xml') {
+        return {
+          ok: true,
+          text: async () => sitemapIndexXml,
+        };
+      }
+      // Page URL from sitemap
+      return { ok: true, text: async () => '<html></html>' };
+    });
+
+    vi.mocked(history.appendHistory).mockResolvedValue();
+
+    await runAudit({ url: 'https://example.com/page1', checks: 'sitemap' });
+
+    const savedEntries = vi.mocked(history.appendHistory).mock.calls[0][1];
+    const entries = Array.isArray(savedEntries) ? savedEntries : [savedEntries];
+
+    // Should report child sitemaps, not URLs
+    expect(entries[0].results.sitemap?.messages.some((m: string) => m.includes('child sitemaps'))).toBe(true);
+    expect(entries[0].results.sitemap?.messages.some((m: string) => m.includes('3 child sitemaps'))).toBe(true);
+
+    // Should NOT attempt to HEAD check child sitemap URLs
+    expect(fetchCalls.filter((url) => url.includes('sitemap-')).length).toBe(0);
+
+    // Should NOT have sampling message
+    expect(entries[0].results.sitemap?.messages.some((m: string) => m.includes('sampled URLs'))).toBe(false);
+  });
 });

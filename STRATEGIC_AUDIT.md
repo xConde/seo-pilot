@@ -40,3 +40,9 @@ Three bugs introduced by the hardening commit itself:
 2. **Bing concurrent retries amplify 429 storms (MEDIUM).** `bing-webmaster.ts`: 5 concurrent requests each with independent `withRetry`. If all 5 get rate-limited, all 5 retry simultaneously at the same backoff intervals — 20 wasted requests in 7 seconds. Concurrency without shared backoff is worse than sequential.
 
 3. **Audit sitemap URL count wrong for sitemap indexes (LOW-MEDIUM).** `audit.ts` line 163: inline `<loc>` regex replaced the recursive `fetchSitemapUrls()` call. For sitemap indexes, `<loc>` values are child sitemap URLs, not page URLs. The reported count is wrong. We fixed the double-fetch but regressed the accuracy.
+
+## Deployment Checklist
+
+- [ ] **1. Fix Bing 429 retry storm** — Replace independent per-URL retry with chunk-level backoff: if any request in a concurrent chunk gets 429, pause the entire chunk before retrying. Prevents amplifying rate limits.
+- [ ] **2. Fix audit sitemap index URL count** — Pass already-fetched text to a helper that detects sitemap index format and reports "X child sitemaps" vs "X page URLs". No second fetch.
+- [ ] **3. Final verification** — typecheck, 161+ tests green, `npm run build && node dist/cli.js --help`, smoke test.

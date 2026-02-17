@@ -1,5 +1,3 @@
-import { withRetry } from '../utils/retry.js';
-
 export interface BingSubmitResult {
   success: boolean;
   urlCount: number;
@@ -15,26 +13,49 @@ export async function submitBingUrls(
   let successCount = 0;
   const concurrency = 5;
 
-  // Process in chunks of `concurrency`
   for (let i = 0; i < urls.length; i += concurrency) {
     const chunk = urls.slice(i, i + concurrency);
-    const results = await Promise.allSettled(
-      chunk.map((url) =>
-        withRetry(
-          () => submitSingleUrl(url, apiKey, siteUrl),
-          { maxRetries: 3, baseDelayMs: 1000 }
-        )
-      )
-    );
+    let pending = chunk.map((url, idx) => ({ url, idx }));
+    let attempt = 0;
+    const maxRetries = 3;
+    const baseDelayMs = 1000;
 
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        successCount++;
-      } else {
-        const message = result.reason instanceof Error ? result.reason.message : 'Unknown error';
-        errors.push(`URL ${chunk[index]}: ${message}`);
+    while (pending.length > 0 && attempt <= maxRetries) {
+      if (attempt > 0) {
+        // Back off the entire chunk
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
-    });
+
+      const results = await Promise.allSettled(
+        pending.map(({ url }) => submitSingleUrl(url, apiKey, siteUrl))
+      );
+
+      const stillPending: typeof pending = [];
+
+      results.forEach((result, idx) => {
+        const item = pending[idx]!;
+        if (result.status === 'fulfilled') {
+          successCount++;
+        } else {
+          const is429 =
+            result.reason !== null &&
+            typeof result.reason === 'object' &&
+            'status' in result.reason &&
+            result.reason.status === 429;
+
+          if (is429 && attempt < maxRetries) {
+            stillPending.push(item);
+          } else {
+            const message = result.reason instanceof Error ? result.reason.message : 'Unknown error';
+            errors.push(`URL ${item.url}: ${message}`);
+          }
+        }
+      });
+
+      pending = stillPending;
+      attempt++;
+    }
   }
 
   return {
