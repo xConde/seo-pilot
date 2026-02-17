@@ -43,22 +43,44 @@ export async function queryPerformance(
     return date.toISOString().split('T')[0]!;
   };
 
-  const requestBody: any = {
+  interface SearchAnalyticsRequest {
+    startDate: string;
+    endDate: string;
+    dimensions: string[];
+    rowLimit: number;
+    dimensionFilterGroups?: Array<{
+      groupType: string;
+      filters: Array<{
+        dimension: string;
+        operator: string;
+        expression: string;
+      }>;
+    }>;
+  }
+
+  const requestBody: SearchAnalyticsRequest = {
     startDate: formatDate(startDate),
     endDate: formatDate(endDate),
     dimensions: ['query', 'page'],
     rowLimit: 1000,
   };
 
-  // Add keyword filter if provided
+  // Add keyword filter if provided — one filter group per keyword with OR semantics.
+  // Google's API applies AND within a filter group, so we use containsKeyword
+  // with a regex OR pattern to match any of the keywords in a single request.
   if (options.keywords && options.keywords.length > 0) {
     requestBody.dimensionFilterGroups = [
       {
-        filters: options.keywords.map((keyword) => ({
-          dimension: 'query',
-          operator: 'equals',
-          expression: keyword,
-        })),
+        groupType: 'and',
+        filters: [
+          {
+            dimension: 'query',
+            operator: 'includingRegex',
+            expression: options.keywords
+              .map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+              .join('|'),
+          },
+        ],
       },
     ];
   }

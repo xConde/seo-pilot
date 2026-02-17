@@ -84,18 +84,15 @@ describe('google-search-console', () => {
     const callArgs = (global.fetch as any).mock.calls[0][1];
     const body = JSON.parse(callArgs.body);
 
+    // Multiple keywords should use regex OR, not AND with equals
     expect(body.dimensionFilterGroups).toEqual([
       {
+        groupType: 'and',
         filters: [
           {
             dimension: 'query',
-            operator: 'equals',
-            expression: 'typescript',
-          },
-          {
-            dimension: 'query',
-            operator: 'equals',
-            expression: 'node.js',
+            operator: 'includingRegex',
+            expression: 'typescript|node\\.js',
           },
         ],
       },
