@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.seo-pilot/
+.credentials/
+.env.local
+*.tgz
