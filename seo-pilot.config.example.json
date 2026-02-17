@@ -1,0 +1,29 @@
+{
+  "version": "1",
+  "site": {
+    "url": "https://yoursite.com",
+    "sitemap": "https://yoursite.com/sitemap.xml"
+  },
+  "keywords": ["your keyword 1", "your keyword 2"],
+  "apis": {
+    "indexnow": {
+      "key": "your-32-char-hex-key"
+    },
+    "google": {
+      "serviceAccountPath": "./.credentials/service-account.json",
+      "siteUrl": "sc-domain:yoursite.com"
+    },
+    "bing": {
+      "apiKey": "${BING_WEBMASTER_API_KEY}",
+      "siteUrl": "https://yoursite.com"
+    },
+    "customSearch": {
+      "apiKey": "${CUSTOM_SEARCH_API_KEY}",
+      "engineId": "${CUSTOM_SEARCH_ENGINE_ID}"
+    }
+  },
+  "discover": {
+    "sites": ["reddit.com", "quora.com"],
+    "resultsPerKeyword": 5
+  }
+}

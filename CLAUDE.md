@@ -21,6 +21,9 @@ Production-ready, lightweight, zero-framework approach.
 | `discover` | Find forum/directory engagement opportunities |
 | `audit` | Validate on-page SEO (meta, schema, links, sitemap) |
 
+## Documentation
+- User-facing docs: `README.md` (quickstart) and `docs/setup-guide.md` (credential setup)
+
 ## Development
 
 ```bash
