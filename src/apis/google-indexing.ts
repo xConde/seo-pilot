@@ -119,7 +119,7 @@ function parseMultipartResponse(responseText: string): BatchItem[] {
 
     // Extract HTTP status code
     const statusMatch = part.match(/HTTP\/\d\.\d (\d+)/);
-    if (statusMatch) {
+    if (statusMatch && statusMatch[1]) {
       const statusCode = parseInt(statusMatch[1], 10);
 
       // Try to extract JSON body for error details

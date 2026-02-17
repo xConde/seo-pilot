@@ -19,12 +19,13 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
 
     const arg = argv[i];
+    if (!arg) continue;
 
     if (arg.startsWith('--')) {
       // Handle --flag=value
       if (arg.includes('=')) {
         const [key, value] = arg.slice(2).split('=');
-        flags[key] = value;
+        if (key) flags[key] = value ?? '';
       } else {
         const key = arg.slice(2);
         const nextArg = argv[i + 1];

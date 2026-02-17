@@ -65,7 +65,7 @@ export async function getGoogleAccessToken(
     );
   }
 
-  const data: TokenResponse = await response.json();
+  const data = await response.json() as TokenResponse;
 
   // Cache the token
   tokenCache = {

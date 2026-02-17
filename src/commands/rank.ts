@@ -12,6 +12,7 @@ interface RankHistoryEntry {
   impressions: number;
   ctr: number;
   position: number;
+  [key: string]: unknown;
 }
 
 export async function runRank(

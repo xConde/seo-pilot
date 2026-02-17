@@ -23,6 +23,7 @@ interface AuditHistoryEntry {
   timestamp: string;
   url: string;
   results: AuditResult['checks'];
+  [key: string]: unknown;
 }
 
 async function auditMetaTags(html: string): Promise<CheckResult> {

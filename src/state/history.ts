@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export interface HistoryEntry {
+export type HistoryEntry = {
   timestamp: string; // ISO 8601
   [key: string]: unknown;
-}
+};
 
 const STATE_DIR_NAME = '.seo-pilot';
 

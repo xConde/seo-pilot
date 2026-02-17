@@ -12,6 +12,7 @@ interface InspectHistoryEntry {
   lastCrawlTime: string;
   indexingState: string;
   mobileUsability: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -65,7 +66,7 @@ export async function runInspect(
     const errors: string[] = [];
 
     for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
+      const url = urls[i]!;
       try {
         log.info(`Inspecting ${i + 1}/${urls.length}: ${url}`);
         const result = await inspectUrl(

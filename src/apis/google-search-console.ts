@@ -40,7 +40,7 @@ export async function queryPerformance(
   startDate.setDate(startDate.getDate() - days);
 
   const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split('T')[0]!;
   };
 
   const requestBody: any = {
@@ -88,7 +88,7 @@ export async function queryPerformance(
     return res;
   });
 
-  const data: PerformanceApiResponse = await response.json();
+  const data = await response.json() as PerformanceApiResponse;
 
   if (!data.rows || data.rows.length === 0) {
     return [];

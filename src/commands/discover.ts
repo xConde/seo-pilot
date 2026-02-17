@@ -8,6 +8,7 @@ interface DiscoverHistoryEntry {
   url: string;
   keyword?: string;
   type: 'forum' | 'directory';
+  [key: string]: unknown;
 }
 
 const DIRECTORY_QUERIES = [

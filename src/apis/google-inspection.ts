@@ -66,7 +66,7 @@ export async function inspectUrl(
     return res;
   });
 
-  const data: InspectionApiResponse = await response.json();
+  const data = await response.json() as InspectionApiResponse;
 
   const indexStatus = data.inspectionResult?.indexStatusResult;
   const mobileUsability = data.inspectionResult?.mobileUsabilityResult;

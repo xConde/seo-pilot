@@ -24,7 +24,7 @@ export const log = {
 
     // Format header row
     const headerRow = headers
-      .map((header, i) => header.padEnd(colWidths[i]))
+      .map((header, i) => header.padEnd(colWidths[i]!))
       .join(' | ');
     console.log(headerRow);
 
@@ -35,7 +35,7 @@ export const log = {
     // Format data rows
     rows.forEach((row) => {
       const formattedRow = row
-        .map((cell, i) => (cell ?? '').padEnd(colWidths[i]))
+        .map((cell, i) => (cell ?? '').padEnd(colWidths[i]!))
         .join(' | ');
       console.log(formattedRow);
     });

@@ -13,6 +13,7 @@ interface IndexHistoryEntry {
   urlCount: number;
   success: boolean;
   errors: string[];
+  [key: string]: unknown;
 }
 
 export async function runIndex(

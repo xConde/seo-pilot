@@ -8,7 +8,7 @@ export async function fetchSitemapUrls(sitemapUrl: string): Promise<string[]> {
 
   if (indexMatches.length > 0) {
     // This is a sitemap index - fetch all child sitemaps
-    const childSitemapUrls = indexMatches.map((match) => match[1]);
+    const childSitemapUrls = indexMatches.map((match) => match[1]!).filter((url): url is string => !!url);
     const allUrls = await Promise.all(
       childSitemapUrls.map((url) => fetchSitemapUrls(url))
     );
@@ -19,7 +19,7 @@ export async function fetchSitemapUrls(sitemapUrl: string): Promise<string[]> {
 
   // This is a regular sitemap - extract <loc> values
   const urlRegex = /<loc>(.*?)<\/loc>/g;
-  const urls = Array.from(text.matchAll(urlRegex)).map((match) => match[1]);
+  const urls = Array.from(text.matchAll(urlRegex)).map((match) => match[1]!).filter((url): url is string => !!url);
 
   // Deduplicate
   return Array.from(new Set(urls));
