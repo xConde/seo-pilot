@@ -27,6 +27,7 @@ describe('fetchSitemapUrls', () => {
 </urlset>`;
 
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       text: () => Promise.resolve(mockXml),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -68,9 +69,9 @@ describe('fetchSitemapUrls', () => {
 
     const mockFetch = vi
       .fn()
-      .mockResolvedValueOnce({ text: () => Promise.resolve(indexXml) })
-      .mockResolvedValueOnce({ text: () => Promise.resolve(sitemap1Xml) })
-      .mockResolvedValueOnce({ text: () => Promise.resolve(sitemap2Xml) });
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(indexXml) })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(sitemap1Xml) })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(sitemap2Xml) });
 
     vi.stubGlobal('fetch', mockFetch);
 
@@ -95,6 +96,7 @@ describe('fetchSitemapUrls', () => {
 </urlset>`;
 
     const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
       text: () => Promise.resolve(mockXml),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -102,6 +104,18 @@ describe('fetchSitemapUrls', () => {
     const urls = await fetchSitemapUrls('https://example.com/sitemap.xml');
 
     expect(urls).toEqual(['https://example.com/page1', 'https://example.com/page2']);
+  });
+
+  it('throws error on non-OK response', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(
+      fetchSitemapUrls('https://example.com/sitemap.xml')
+    ).rejects.toThrow('Failed to fetch sitemap: https://example.com/sitemap.xml returned HTTP 404');
   });
 
   it('deduplicates URLs across multiple sitemaps in index', async () => {
@@ -137,9 +151,9 @@ describe('fetchSitemapUrls', () => {
 
     const mockFetch = vi
       .fn()
-      .mockResolvedValueOnce({ text: () => Promise.resolve(indexXml) })
-      .mockResolvedValueOnce({ text: () => Promise.resolve(sitemap1Xml) })
-      .mockResolvedValueOnce({ text: () => Promise.resolve(sitemap2Xml) });
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(indexXml) })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(sitemap1Xml) })
+      .mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(sitemap2Xml) });
 
     vi.stubGlobal('fetch', mockFetch);
 

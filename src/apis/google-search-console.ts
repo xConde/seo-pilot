@@ -100,11 +100,10 @@ export async function queryPerformance(
 
     if (!res.ok) {
       const errorText = await res.text();
-      const error = new Error(
-        `Failed to query performance: ${res.status} ${errorText}`
+      throw Object.assign(
+        new Error(`Failed to query performance: ${res.status} ${errorText}`),
+        { status: res.status }
       );
-      (error as any).status = res.status;
-      throw error;
     }
 
     return res;

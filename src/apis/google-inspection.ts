@@ -59,8 +59,7 @@ export async function inspectUrl(
       const error = new Error(
         `Failed to inspect URL: ${res.status} ${errorText}`
       );
-      (error as any).status = res.status;
-      throw error;
+      throw Object.assign(error, { status: res.status });
     }
 
     return res;

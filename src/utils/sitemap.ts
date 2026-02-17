@@ -1,5 +1,8 @@
 export async function fetchSitemapUrls(sitemapUrl: string): Promise<string[]> {
   const response = await fetch(sitemapUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch sitemap: ${sitemapUrl} returned HTTP ${response.status}`);
+  }
   const text = await response.text();
 
   // Check if this is a sitemap index (contains <sitemap> elements)
