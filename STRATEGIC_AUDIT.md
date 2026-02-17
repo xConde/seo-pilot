@@ -49,3 +49,12 @@ The config has 6 keywords. Running `seo-pilot rank` without `--keyword` passes a
 - **`sitemap.ts:2`** doesn't check `response.ok` — a 404 sitemap silently returns empty/garbage URLs.
 - **`appendHistory` read-then-write** is not atomic — concurrent processes can clobber each other's history.
 - **`process.exit(1)` scattered through commands** prevents cleanup and makes programmatic use impossible.
+
+## Deployment Checklist
+
+Remaining steps to take seo-pilot from "started" to "shippable":
+
+- [ ] **Fix scope-unaware token cache** — Key cache by scope string so different commands don't cross-contaminate auth tokens.
+- [ ] **Fix keyword filter AND→OR** — Search Console keyword filter returns zero results with multiple keywords. Use separate filter groups or individual API calls.
+- [ ] **Eliminate `any` types + fix sitemap error handling** — Remove `(error as any).status` patterns, type `requestBody` properly, add `response.ok` check to sitemap fetcher.
+- [ ] **Final verification** — Full test suite, typecheck, build (`tsc`), manual smoke test of `--help` and `--version`.

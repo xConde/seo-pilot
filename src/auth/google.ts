@@ -17,16 +17,18 @@ interface CachedToken {
   expiresAt: number;
 }
 
-let tokenCache: CachedToken | null = null;
+const tokenCache = new Map<string, CachedToken>();
 
 export async function getGoogleAccessToken(
   serviceAccountPath: string,
   scopes: string[]
 ): Promise<string> {
-  // Check cache
+  // Key cache by sorted scopes to handle order-independent lookups
+  const cacheKey = [...scopes].sort().join(' ');
   const now = Math.floor(Date.now() / 1000);
-  if (tokenCache && tokenCache.expiresAt > now + 60) {
-    return tokenCache.token;
+  const cached = tokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > now + 60) {
+    return cached.token;
   }
 
   // Read service account file
@@ -67,11 +69,11 @@ export async function getGoogleAccessToken(
 
   const data = await response.json() as TokenResponse;
 
-  // Cache the token
-  tokenCache = {
+  // Cache the token keyed by scopes
+  tokenCache.set(cacheKey, {
     token: data.access_token,
     expiresAt: now + data.expires_in,
-  };
+  });
 
   return data.access_token;
 }

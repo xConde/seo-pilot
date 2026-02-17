@@ -111,6 +111,46 @@ describe('getGoogleAccessToken', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1); // Only called once due to caching
   });
 
+  it('should use separate cache entries for different scopes', async () => {
+    const { getGoogleAccessToken } = await import('../../src/auth/google.js');
+
+    const mockReadFile = vi.mocked(readFile);
+    mockReadFile.mockResolvedValue(JSON.stringify(mockServiceAccount));
+
+    const mockSign = vi.mocked(jwt.sign);
+    mockSign.mockReturnValue('mock.jwt.token' as any);
+
+    let callCount = 0;
+    const mockFetch = vi.fn().mockImplementation(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: `token_${++callCount}`,
+        expires_in: 3600,
+        token_type: 'Bearer',
+      }),
+    }));
+    vi.stubGlobal('fetch', mockFetch);
+
+    const indexingToken = await getGoogleAccessToken(
+      '/path/to/sa.json',
+      ['https://www.googleapis.com/auth/indexing']
+    );
+    const webmastersToken = await getGoogleAccessToken(
+      '/path/to/sa.json',
+      ['https://www.googleapis.com/auth/webmasters']
+    );
+    // Same scope again — should hit cache
+    const indexingAgain = await getGoogleAccessToken(
+      '/path/to/sa.json',
+      ['https://www.googleapis.com/auth/indexing']
+    );
+
+    expect(indexingToken).toBe('token_1');
+    expect(webmastersToken).toBe('token_2');
+    expect(indexingAgain).toBe('token_1'); // cached
+    expect(mockFetch).toHaveBeenCalledTimes(2); // only 2 fetches, not 3
+  });
+
   it('should throw error on invalid service account file', async () => {
     const { getGoogleAccessToken } = await import('../../src/auth/google.js');
 
