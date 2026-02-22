@@ -8,6 +8,8 @@ Switch roles. You are no longer the Architect who built this; you are now the Le
 
 Run `git diff --stat main..HEAD` first. Only review files that changed on this branch. Do NOT review unchanged code or suggest improvements outside the branch scope. This is a targeted review, not a codebase audit.
 
+If the repo has Claude Code hooks configured, verify they are not being bypassed. Run `cat .claude/settings.json 2>/dev/null` and `ls .claude/hooks/ 2>/dev/null` — confirm all deterministic guardrails are wired and active. If hooks exist but are misconfigured, flag this as Finding 0 in your critique.
+
 ## Phase 1: The "Devil's Advocate" Interrogation
 
 Review the changes with `git diff main..HEAD -- '*.ts'` (adjust extension as needed) with extreme skepticism. For each changed file, ask yourself:

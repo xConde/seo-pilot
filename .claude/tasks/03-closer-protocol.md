@@ -32,7 +32,7 @@ Format as checkboxes:
 For each item on the checklist:
 
 1. **Code it.** Write the implementation.
-2. **Verify it.** Run tests — must be green before moving on.
+2. **Verify it.** Run affected tests only where possible — not the full suite. Suppress green output; only surface failures. If the test runner outputs more than 20 lines of green, summarize as `✓ [N] tests passing`. Full suite runs happen in Phase 4 (ship-it), not here.
 3. **Check it off.** Update `STRATEGIC_AUDIT.md` with `[x]`.
 4. **Commit it.** Use semantic prefix: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
 5. **Next.** Move to the next item immediately.

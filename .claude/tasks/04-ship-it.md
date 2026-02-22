@@ -78,7 +78,11 @@ Step-by-step guide for a HUMAN to verify this manually:
 3. Verify `[Visual Result]`
 
 ## Test Results
-[Paste final test runner output here]
+> If test output exceeds 50 lines of green, summarize as:
+> "✓ [N] suites, [M] tests passing, 0 failures"
+> Do NOT paste full green output. Only include verbose output if there are failures.
+
+[Paste summary or failure output here]
 
 ## Risk Assessment
 - **Breaking changes:** None / [describe]

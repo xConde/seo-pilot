@@ -1,5 +1,22 @@
 # Claude Code Task Protocols
 
+## Quick Decision Guide
+
+| You just...                        | Run this              |
+|------------------------------------|-----------------------|
+| Started a new sprint/feature       | 01-sovereign-audit    |
+| Finished coding, ready to review   | 02-red-team-gate      |
+| Red team passed, need to finish up | 03-closer-protocol    |
+| Think you're done                  | 04-ship-it            |
+| About to commit something small    | quick-sanity          |
+| Need repetitive file-by-file work  | ralph-* templates     |
+
+### Minimum Viable Workflow
+
+If you only use ONE prompt, use `02-red-team-gate.md` before every merge. Everything else is acceleration.
+
+---
+
 ## The Sprint Lifecycle
 
 ```
@@ -14,6 +31,32 @@
 │  + branch    │     │  + fix        │     │  + code      │     │              │
 └─────────────┘     └──────────────┘     └─────────────┘     └──────────────┘
 ```
+
+## Hooks
+
+The `hooks/` directory contains deterministic guardrail scripts that fire automatically via Claude Code hooks. These are NOT prompts — they are enforced checks the agent cannot skip.
+
+| Hook Script            | Fires On         | What It Catches                          |
+|------------------------|------------------|------------------------------------------|
+| `post-write-check.sh`  | After file write | console.log, catch(e), TODO/FIXME/HACK   |
+| `pre-commit-check.sh`  | Before commit    | TypeScript compilation, test health       |
+
+To wire hooks into Claude Code, add to your `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "write|edit|MultiEdit",
+        "hook": "bash .claude/hooks/post-write-check.sh $FILEPATH"
+      }
+    ]
+  }
+}
+```
+
+> **Note:** Verify the exact hooks config format against [Claude Code docs](https://docs.claude.com/en/docs/claude-code/overview) as the API may evolve. The shell scripts themselves are stable regardless of config format.
 
 ## Usage
 
