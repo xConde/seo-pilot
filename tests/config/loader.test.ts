@@ -217,4 +217,116 @@ describe('loadConfig', () => {
       unlinkSync(defaultPath);
     }
   });
+
+  it('supports optional env vars with default syntax', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${OPTIONAL_KEY:-fallback-key}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('fallback-key');
+  });
+
+  it('uses env var value over default when var is set', () => {
+    vi.stubEnv('SET_VAR', 'real-value');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${SET_VAR:-fallback}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('real-value');
+  });
+
+  it('supports empty default with ${VAR:-} syntax', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${EMPTY_DEFAULT:-}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('');
+  });
+
+  it('throws when service account file does not exist', () => {
+    vi.stubEnv('GOOGLE_SA_PATH', '/nonexistent/service-account.json');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        google: {
+          serviceAccountPath: '${GOOGLE_SA_PATH}',
+          siteUrl: 'https://example.com',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+
+    expect(() => loadConfig(TEST_CONFIG_PATH)).toThrow(
+      'Google service account file not found'
+    );
+  });
+
+  it('resolves relative serviceAccountPath from config directory', () => {
+    // Create a fake service account file in the test dir
+    const saPath = join(TEST_DIR, 'creds.json');
+    writeFileSync(saPath, JSON.stringify({ type: 'service_account' }));
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        google: {
+          serviceAccountPath: './creds.json',
+          siteUrl: 'https://example.com',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Should resolve relative to config dir, not cwd
+    expect(result.apis.google?.serviceAccountPath).toBe(saPath);
+  });
 });

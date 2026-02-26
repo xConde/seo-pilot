@@ -1,35 +1,34 @@
-# Strategic Audit — 2026-02-26
+# Strategic Audit — 2026-02-26 (Round 2)
 
 ## Momentum & Zombies
 
-**Momentum**: All 6 commands built, 165 tests green, red-team hardened, TypeScript strict clean. The CLI is production-ready but has no distribution mechanism.
+**Momentum**: 165 tests green, CI/CD pipelines added, Claude PR review wired up, bmtgradweek integration guide written. Previous sprint resolved all zombie features and red-team findings.
 
-**Zombies**: None. Previous audit items (hardcoded discover queries, no-op setup validation, boundary regex, Bing retry storms, sitemap index count) are all resolved. Zero TODO/FIXME/HACK comments in codebase.
-
-**Abandoned work**: `feat/initial-implementation` branch exists but is fully merged. No stashes.
+**Zombies**: None in source code. But the **npm distribution layer is broken** — the package would fail in CI if published today.
 
 ## The Gap
 
-**seo-pilot has no CI/CD pipeline and no way to be consumed by other repos.**
+**seo-pilot cannot be consumed via `npx` without crashing on partial configuration.**
 
-The tool is complete but trapped on a developer's machine. There is:
-- No GitHub Actions workflow (test, typecheck, build)
-- No automated release/publish pipeline
-- No reusable workflow for consuming repos (e.g., bmtgradweek)
+The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs `npx seo-pilot index --config seo-pilot.config.json`, it will crash because:
 
-Meanwhile, bmtgradweek.com has strong on-page SEO (meta, schema, sitemap, robots.txt, structured data) but **zero organic growth automation**:
-- No active index submission (IndexNow, Google, Bing)
-- No rank tracking for core keywords (BMT graduation, Lackland AFB, etc.)
-- No indexing status inspection
-- No automated on-page audit
-- No forum/directory discovery
+1. **Config loader throws on missing env vars** — If `${GOOGLE_SERVICE_ACCOUNT_PATH}` isn't set but is referenced in config, the loader crashes before the command even runs. The `index` command gracefully skips unconfigured services, but the loader kills the process first.
 
-All 5 gaps map 1:1 to seo-pilot's commands. The blocker is that seo-pilot can't be run in CI.
+2. **No `files` field in package.json** — `npm publish` ships 414KB including tests, `.claude/`, `.github/`, and potentially `.credentials/`.
+
+3. **Service account file path not validated** — Raw ENOENT crash with no actionable error message.
+
+4. **Relative paths resolve from cwd** — `./creds.json` in config resolves from wherever the CLI is invoked, not from the config file's directory.
+
+5. **Commands exit inconsistently on missing APIs** — `index` gracefully skips; `inspect`/`rank`/`discover` hard-exit with `process.exit(1)`.
+
+6. **`audit` has no `--base-url` override** — Can only audit the live site URL from config; can't audit staging/preview deployments.
 
 ## The Battle Plan
 
-- [x] **1. Add GitHub Actions CI workflow** — Test, typecheck, build as 3 parallel jobs on push/PR to main.
-- [x] **2. Add npm publish workflow** — On `v*` tag push, full test suite → npm publish → GitHub Release.
-- [x] **3. Add reusable SEO workflow** — `workflow_call` workflow for consuming repos to run seo-pilot commands post-deploy.
-- [x] **4. Add Claude PR review workflow** — Auto-review on PR open/sync, @claude mention support. Mirrors bmtgradweek setup.
-- [x] **5. Create bmtgradweek integration config** — Integration guide with config, workflow snippets, secrets checklist, and rollout plan. See `docs/bmtgradweek-integration.md`.
+- [ ] **1. Support optional env vars in config** — `${VAR}` throws if missing; add `${VAR?}` or `${VAR:-default}` syntax for optional values. Alternatively, make the loader skip substitution for API blocks that aren't needed by the current command.
+- [ ] **2. Add `files` field to package.json** — Ship only `dist/`, `README.md`, `LICENSE`. Add `main`, `exports`, `types` fields.
+- [ ] **3. Validate service account file at config load** — Check `existsSync()` and throw a clear error instead of raw ENOENT.
+- [ ] **4. Resolve relative config paths from config directory** — Use config file's dirname as base for relative paths like `serviceAccountPath`.
+- [ ] **5. Harmonize missing-API behavior** — All commands should warn-and-skip (like `index`) instead of hard-exiting.
+- [ ] **6. Add `--base-url` flag to audit command** — Override `site.url` for staging/preview audit in CI.

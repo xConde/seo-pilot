@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Organic SEO promotion CLI tool",
   "type": "module",
+  "files": ["dist/", "README.md"],
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
   "bin": {
     "seo-pilot": "./dist/cli.js"
   },
