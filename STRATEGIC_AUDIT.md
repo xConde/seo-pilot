@@ -26,9 +26,9 @@ The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs
 
 ## The Battle Plan
 
-- [ ] **1. Support optional env vars in config** — `${VAR}` throws if missing; add `${VAR?}` or `${VAR:-default}` syntax for optional values. Alternatively, make the loader skip substitution for API blocks that aren't needed by the current command.
-- [ ] **2. Add `files` field to package.json** — Ship only `dist/`, `README.md`, `LICENSE`. Add `main`, `exports`, `types` fields.
-- [ ] **3. Validate service account file at config load** — Check `existsSync()` and throw a clear error instead of raw ENOENT.
-- [ ] **4. Resolve relative config paths from config directory** — Use config file's dirname as base for relative paths like `serviceAccountPath`.
-- [ ] **5. Harmonize missing-API behavior** — All commands should warn-and-skip (like `index`) instead of hard-exiting.
-- [ ] **6. Add `--base-url` flag to audit command** — Override `site.url` for staging/preview audit in CI.
+- [x] **1. Support optional env vars in config** — `${VAR:-default}` returns fallback when unset; `${VAR:-}` returns empty string. Plain `${VAR}` still throws.
+- [x] **2. Add `files` field to package.json** — Ships only `dist/` and `README.md`. Added `main`, `types` fields.
+- [x] **3. Validate service account file at config load** — `existsSync()` check with clear error message instead of raw ENOENT.
+- [x] **4. Resolve relative config paths from config directory** — `serviceAccountPath` resolved from config file's dirname, not cwd.
+- [x] **5. Harmonize missing-API behavior** — inspect/rank/discover now warn-and-return instead of process.exit(1).
+- [x] **6. Add `--base-url` flag to audit command** — Override site URL for staging/preview audit. `--sitemap` flag also added.
