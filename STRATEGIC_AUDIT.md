@@ -32,4 +32,4 @@ All 5 gaps map 1:1 to seo-pilot's commands. The blocker is that seo-pilot can't 
 - [x] **2. Add npm publish workflow** — On `v*` tag push, full test suite → npm publish → GitHub Release.
 - [x] **3. Add reusable SEO workflow** — `workflow_call` workflow for consuming repos to run seo-pilot commands post-deploy.
 - [x] **4. Add Claude PR review workflow** — Auto-review on PR open/sync, @claude mention support. Mirrors bmtgradweek setup.
-- [ ] **5. Create bmtgradweek integration config** — Draft `seo-pilot.config.json` and GitHub Actions workflow snippet for bmtgradweek showing how to wire index + rank + audit into their deploy pipeline.
+- [x] **5. Create bmtgradweek integration config** — Integration guide with config, workflow snippets, secrets checklist, and rollout plan. See `docs/bmtgradweek-integration.md`.
