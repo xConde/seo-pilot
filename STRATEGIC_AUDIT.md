@@ -66,3 +66,10 @@ The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs
 **Location:** `src/commands/audit.ts:221-230`
 **Risk:** `http://localhost`, `http://127.0.0.1`, `http://169.254.169.254` all pass validation. In CI, this could expose internal services. However, this is a CLI tool (not a server-side proxy), and the attacker would need to control the CLI flags — which means they already have shell access. Accepted risk for a CLI tool.
 **Fix:** Documented as known limitation. No code change needed.
+
+## Deployment Checklist
+
+- [x] **1. Document `--base-url` and `--sitemap` flags in audit help text** — CLI `audit --help` doesn't show the new flags. Add them to the help output in `src/cli.ts`.
+- [x] **2. Update CLAUDE.md test count** — References "165 tests" but current count is 178. Also documented `${VAR:-default}` syntax.
+- [x] **3. Add `seo-pilot.config.json` to .gitignore** — Prevent local config from being committed (the example template is `seo-pilot.config.example.json`).
+- [x] **4. Verify full build + CLI smoke test** — Build passes, `--help` exits 0, `audit --help` shows `--base-url` and `--sitemap` flags.

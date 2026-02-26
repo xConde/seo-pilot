@@ -79,6 +79,8 @@ const COMMAND_HELP: Record<string, string> = {
   Options:
     --url <url>            Audit a single URL (default: all sitemap URLs)
     --checks <list>        Comma-separated checks: meta, schema, links, sitemap (default: all)
+    --base-url <url>       Override site URL (e.g. for staging/preview deploys)
+    --sitemap <url>        Override sitemap URL
     --config <path>        Path to config file`,
 };
 

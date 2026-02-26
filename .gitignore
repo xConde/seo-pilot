@@ -4,3 +4,4 @@ dist/
 .credentials/
 .env.local
 *.tgz
+seo-pilot.config.json
