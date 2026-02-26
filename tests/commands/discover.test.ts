@@ -20,7 +20,7 @@ describe('discover command', () => {
     });
   });
 
-  it('should exit if customSearch not configured', async () => {
+  it('should warn and return if customSearch not configured', async () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',
       site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
@@ -29,8 +29,12 @@ describe('discover command', () => {
       discover: { sites: ['reddit.com'], resultsPerKeyword: 5 },
     });
 
-    await expect(runDiscover({})).rejects.toThrow('process.exit called');
-    expect(process.exit).toHaveBeenCalledWith(1);
+    await expect(runDiscover({})).resolves.toBeUndefined();
+
+    expect(customSearchApi.customSearch).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Google Custom Search API not configured — skipping discover')
+    );
   });
 
   it('should run forums mode by default', async () => {

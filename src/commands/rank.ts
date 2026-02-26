@@ -26,9 +26,9 @@ export async function runRank(
 
     // Check if Google is configured
     if (!config.apis.google) {
-      log.error('Google Search Console is not configured');
+      log.warn('Google is not configured — skipping rank');
       log.info('Run "seo-pilot setup" to configure Google integration');
-      process.exit(1);
+      return;
     }
 
     // Get access token

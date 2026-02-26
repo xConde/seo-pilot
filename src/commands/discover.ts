@@ -69,9 +69,9 @@ export async function runDiscover(
 
     // Check customSearch config
     if (!config.apis.customSearch) {
-      log.error('Google Custom Search API not configured');
+      log.warn('Google Custom Search API not configured — skipping discover');
       log.info('Run "seo-pilot setup" to configure Custom Search API');
-      process.exit(1);
+      return;
     }
 
     const { apiKey, engineId } = config.apis.customSearch;

@@ -217,6 +217,21 @@ export async function runAudit(
       typeof flags.config === 'string' ? flags.config : undefined;
     const config = loadConfig(configPath);
 
+    // Allow --base-url to override site URL for staging/preview audits
+    if (typeof flags['base-url'] === 'string') {
+      const baseUrl = flags['base-url'];
+      config.site.url = baseUrl;
+      // If sitemap wasn't explicitly overridden, derive from base URL
+      if (!flags.sitemap) {
+        config.site.sitemap = `${baseUrl.replace(/\/$/, '')}/sitemap.xml`;
+      }
+    }
+
+    // Allow --sitemap to override the sitemap URL
+    if (typeof flags.sitemap === 'string') {
+      config.site.sitemap = flags.sitemap;
+    }
+
     // Get URLs to audit
     let urls: string[];
     if (typeof flags.url === 'string') {
