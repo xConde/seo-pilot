@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Organic SEO promotion CLI tool",
   "type": "module",
-  "files": ["dist/", "README.md"],
+  "files": ["dist/", "README.md", "LICENSE"],
+  "license": "MIT",
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
   "bin": {

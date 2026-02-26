@@ -498,6 +498,63 @@ describe('audit command', () => {
     expect(sitemap.fetchSitemapUrls).toHaveBeenCalledWith('https://staging.example.com/custom-sitemap.xml');
   });
 
+  it('should reject invalid --base-url (non-HTTP protocol)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ 'base-url': 'file:///etc/passwd' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --base-url')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid --base-url (not a URL)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ 'base-url': 'not-a-url' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --base-url')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid --sitemap URL', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ sitemap: 'ftp://example.com/sitemap.xml' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --sitemap')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
   it('should detect sitemap index and not check child sitemap URLs', async () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',

@@ -14,9 +14,13 @@ on:
     secrets:
       GOOGLE_SERVICE_ACCOUNT_JSON:
         required: false
+      INDEXNOW_KEY:
+        required: false
       BING_WEBMASTER_API_KEY:
         required: false
       GOOGLE_CUSTOM_SEARCH_KEY:
+        required: false
+      GOOGLE_CSE_ID:
         required: false
 
 jobs:
@@ -29,10 +33,20 @@ jobs:
         with:
           node-version: 20
       - run: npm install -g seo-pilot
+
+      - name: Write Google service account file
+        if: env.GOOGLE_SERVICE_ACCOUNT_JSON != ''
+        run: |
+          mkdir -p .credentials
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > .credentials/google-sa.json
+        shell: bash
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
       - name: Write secrets to .env.local
         run: |
-          if [ -n "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
-            echo "GOOGLE_SERVICE_ACCOUNT_JSON=$GOOGLE_SERVICE_ACCOUNT_JSON" >> .env.local
+          if [ -n "$INDEXNOW_KEY" ]; then
+            echo "INDEXNOW_KEY=$INDEXNOW_KEY" >> .env.local
           fi
           if [ -n "$BING_WEBMASTER_API_KEY" ]; then
             echo "BING_WEBMASTER_API_KEY=$BING_WEBMASTER_API_KEY" >> .env.local
@@ -40,10 +54,18 @@ jobs:
           if [ -n "$GOOGLE_CUSTOM_SEARCH_KEY" ]; then
             echo "GOOGLE_CUSTOM_SEARCH_KEY=$GOOGLE_CUSTOM_SEARCH_KEY" >> .env.local
           fi
+          if [ -n "$GOOGLE_CSE_ID" ]; then
+            echo "GOOGLE_CSE_ID=$GOOGLE_CSE_ID" >> .env.local
+          fi
+          if [ -f .credentials/google-sa.json ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_PATH=.credentials/google-sa.json" >> .env.local
+          fi
         env:
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
           BING_WEBMASTER_API_KEY: ${{ secrets.BING_WEBMASTER_API_KEY }}
           GOOGLE_CUSTOM_SEARCH_KEY: ${{ secrets.GOOGLE_CUSTOM_SEARCH_KEY }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+
       - name: Run seo-pilot commands
         run: |
           for cmd in ${{ inputs.commands }}; do

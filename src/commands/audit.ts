@@ -220,6 +220,15 @@ export async function runAudit(
     // Allow --base-url to override site URL for staging/preview audits
     if (typeof flags['base-url'] === 'string') {
       const baseUrl = flags['base-url'];
+      try {
+        const parsed = new URL(baseUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          throw new Error('invalid protocol');
+        }
+      } catch {
+        log.error(`Invalid --base-url: must be a valid HTTP(S) URL`);
+        return;
+      }
       config.site.url = baseUrl;
       // If sitemap wasn't explicitly overridden, derive from base URL
       if (!flags.sitemap) {
@@ -229,7 +238,17 @@ export async function runAudit(
 
     // Allow --sitemap to override the sitemap URL
     if (typeof flags.sitemap === 'string') {
-      config.site.sitemap = flags.sitemap;
+      const sitemapUrl = flags.sitemap;
+      try {
+        const parsed = new URL(sitemapUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          throw new Error('invalid protocol');
+        }
+      } catch {
+        log.error(`Invalid --sitemap: must be a valid HTTP(S) URL`);
+        return;
+      }
+      config.site.sitemap = sitemapUrl;
     }
 
     // Get URLs to audit

@@ -107,6 +107,22 @@ export function loadConfig(path?: string): Config {
 
   const config = result.data;
 
+  // Strip API blocks where required fields are empty (from ${VAR:-} fallback).
+  // This ensures downstream `if (!config.apis.google)` checks correctly skip
+  // unconfigured APIs rather than attempting auth with empty credentials.
+  if (config.apis.indexnow && !config.apis.indexnow.key) {
+    config.apis.indexnow = undefined;
+  }
+  if (config.apis.google && (!config.apis.google.serviceAccountPath || !config.apis.google.siteUrl)) {
+    config.apis.google = undefined;
+  }
+  if (config.apis.bing && !config.apis.bing.apiKey) {
+    config.apis.bing = undefined;
+  }
+  if (config.apis.customSearch && (!config.apis.customSearch.apiKey || !config.apis.customSearch.engineId)) {
+    config.apis.customSearch = undefined;
+  }
+
   // Resolve relative serviceAccountPath from config directory
   if (config.apis.google?.serviceAccountPath) {
     const resolvedPath = resolve(configDir, config.apis.google.serviceAccountPath);

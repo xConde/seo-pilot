@@ -260,7 +260,7 @@ describe('loadConfig', () => {
     expect(result.apis.indexnow?.key).toBe('real-value');
   });
 
-  it('supports empty default with ${VAR:-} syntax', () => {
+  it('strips API blocks when ${VAR:-} resolves to empty string', () => {
     const config = {
       version: '1',
       site: {
@@ -277,7 +277,8 @@ describe('loadConfig', () => {
     writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
     const result = loadConfig(TEST_CONFIG_PATH);
 
-    expect(result.apis.indexnow?.key).toBe('');
+    // Empty key means unconfigured — block should be stripped
+    expect(result.apis.indexnow).toBeUndefined();
   });
 
   it('throws when service account file does not exist', () => {
@@ -328,5 +329,53 @@ describe('loadConfig', () => {
 
     // Should resolve relative to config dir, not cwd
     expect(result.apis.google?.serviceAccountPath).toBe(saPath);
+  });
+
+  it('strips API blocks with empty string values from optional env vars', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '' },
+        google: { serviceAccountPath: '', siteUrl: '' },
+        bing: { apiKey: '', siteUrl: 'https://example.com' },
+        customSearch: { apiKey: '', engineId: '' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // All API blocks should be stripped — empty strings mean unconfigured
+    expect(result.apis.indexnow).toBeUndefined();
+    expect(result.apis.google).toBeUndefined();
+    expect(result.apis.bing).toBeUndefined();
+    expect(result.apis.customSearch).toBeUndefined();
+  });
+
+  it('keeps API blocks with valid values alongside empty optional ones', () => {
+    vi.stubEnv('REAL_KEY', 'my-indexnow-key');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '${REAL_KEY}' },
+        google: { serviceAccountPath: '', siteUrl: '' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // IndexNow should survive, Google should be stripped
+    expect(result.apis.indexnow?.key).toBe('my-indexnow-key');
+    expect(result.apis.google).toBeUndefined();
   });
 });
