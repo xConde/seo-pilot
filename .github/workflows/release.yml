@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 jobs:
   release:
@@ -22,9 +22,20 @@ jobs:
       - run: npm test
       - run: npx tsc --noEmit
       - run: npm run build
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$TAG_NAME" ]; then
+            echo "::error::Tag $TAG_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+        env:
+          TAG_NAME: ${{ github.ref_name }}
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: gh release create ${{ github.ref_name }} --generate-notes
+      - run: |
+          gh release create "$TAG_NAME" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
