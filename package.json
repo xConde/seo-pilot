@@ -1,5 +1,5 @@
 {
-  "name": "seo-pilot",
+  "name": "@xconde/seo-pilot",
   "version": "0.1.0",
   "description": "Organic SEO promotion CLI tool",
   "type": "module",
