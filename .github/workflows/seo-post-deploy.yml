@@ -68,6 +68,9 @@ jobs:
 
       - name: Run seo-pilot commands
         run: |
-          for cmd in ${{ inputs.commands }}; do
-            seo-pilot $cmd --config ${{ inputs.config-path }}
+          for cmd in $COMMANDS; do
+            seo-pilot "$cmd" --config "$CONFIG_PATH"
           done
+        env:
+          COMMANDS: ${{ inputs.commands }}
+          CONFIG_PATH: ${{ inputs.config-path }}

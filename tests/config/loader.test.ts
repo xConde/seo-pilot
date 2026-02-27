@@ -378,4 +378,47 @@ describe('loadConfig', () => {
     expect(result.apis.indexnow?.key).toBe('my-indexnow-key');
     expect(result.apis.google).toBeUndefined();
   });
+
+  it('strips bing block when both fields use empty ${VAR:-} fallback', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        bing: {
+          apiKey: '${BING_API_KEY:-}',
+          siteUrl: '${BING_SITE_URL:-}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Both fields empty — block should be stripped, not crash on .url() validation
+    expect(result.apis.bing).toBeUndefined();
+  });
+
+  it('strips API blocks when env vars contain only whitespace', () => {
+    vi.stubEnv('WHITESPACE_KEY', '   ');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '${WHITESPACE_KEY}' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Whitespace-only value should be treated as empty — block stripped
+    expect(result.apis.indexnow).toBeUndefined();
+  });
 });

