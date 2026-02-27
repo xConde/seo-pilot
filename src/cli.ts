@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { parseArgs } from './utils/args.js';
 import { log } from './utils/logger.js';
 
-const VERSION = '0.1.0';
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json') as { version: string };
 
 const USAGE = `seo-pilot v${VERSION} — Organic SEO promotion CLI
 

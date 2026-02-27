@@ -20,6 +20,11 @@
     "lint": "eslint src/ tests/",
     "prepublishOnly": "npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xConde/seo-pilot.git"
+  },
+  "keywords": ["seo", "cli", "indexing", "rank-tracking", "audit", "indexnow", "google-search-console"],
   "engines": {
     "node": ">=20"
   },
