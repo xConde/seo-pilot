@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install -g @xconde/seo-pilot
+      - run: npm install -g @conde-digital-solutions/seo-pilot
 
       - name: Write Google service account file
         if: env.GOOGLE_SERVICE_ACCOUNT_JSON != ''
