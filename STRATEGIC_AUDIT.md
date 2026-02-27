@@ -101,9 +101,16 @@ The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs
 **Risk:** Workflow writes `.env.local` to workspace root. `loadConfig` reads `.env.local` from `dirname(configPath)`. If `config-path` is in a subdirectory, secrets are silently invisible. All commands skip with no error.
 **Fix:** Accepted constraint — document that config file must be at workspace root for the reusable workflow.
 
-## Deployment Checklist
+## Deployment Checklist (Round 1 — complete)
 
-- [x] **1. Document `--base-url` and `--sitemap` flags in audit help text** — CLI `audit --help` doesn't show the new flags. Add them to the help output in `src/cli.ts`.
-- [x] **2. Update CLAUDE.md test count** — References "165 tests" but current count is 178. Also documented `${VAR:-default}` syntax.
-- [x] **3. Add `seo-pilot.config.json` to .gitignore** — Prevent local config from being committed (the example template is `seo-pilot.config.example.json`).
-- [x] **4. Verify full build + CLI smoke test** — Build passes, `--help` exits 0, `audit --help` shows `--base-url` and `--sitemap` flags.
+- [x] **1. Document `--base-url` and `--sitemap` flags in audit help text**
+- [x] **2. Update CLAUDE.md test count** — 165 → 178
+- [x] **3. Add `seo-pilot.config.json` to .gitignore**
+- [x] **4. Verify full build + CLI smoke test**
+
+## Deployment Checklist (Round 2 — final)
+
+- [x] **1. Update CLAUDE.md test count** — 178 → 180 after red-team tests added
+- [ ] **2. Tighten `release.yml` tag pattern** — `v*` → semver pattern, add version-tag match check (Finding 11)
+- [ ] **3. Full suite verification** — `npm test`, `tsc --noEmit`, `npm run build`, `node dist/cli.js --version`
+- [ ] **4. Push branch and update PR**

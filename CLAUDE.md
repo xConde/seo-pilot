@@ -6,7 +6,7 @@ Production-ready, lightweight, zero-framework approach. Private repo: `xConde/se
 
 ## Stack
 - Node >= 20, TypeScript strict mode (`noUncheckedIndexedAccess`), ESM
-- Vitest for tests (178 tests across 20 files)
+- Vitest for tests (180 tests across 20 files)
 - Zod for config validation
 - Only 3 runtime deps: cheerio, jsonwebtoken, zod
 
@@ -29,7 +29,7 @@ Production-ready, lightweight, zero-framework approach. Private repo: `xConde/se
 ## Development
 
 ```bash
-npm test                        # vitest (178 tests)
+npm test                        # vitest (180 tests)
 npx tsc --noEmit                # typecheck
 npx tsx src/cli.ts <command>    # run in dev
 npm run build                   # compile to dist/
