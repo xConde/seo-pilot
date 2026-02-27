@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Organic SEO promotion CLI tool",
   "type": "module",
+  "files": ["dist/", "README.md", "LICENSE"],
+  "license": "MIT",
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
   "bin": {
     "seo-pilot": "./dist/cli.js"
   },
@@ -16,6 +20,11 @@
     "lint": "eslint src/ tests/",
     "prepublishOnly": "npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xConde/seo-pilot.git"
+  },
+  "keywords": ["seo", "cli", "indexing", "rank-tracking", "audit", "indexnow", "google-search-console"],
   "engines": {
     "node": ">=20"
   },

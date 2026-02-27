@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { createRequire } from 'node:module';
 import { parseArgs } from './utils/args.js';
 import { log } from './utils/logger.js';
 
-const VERSION = '0.1.0';
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json') as { version: string };
 
 const USAGE = `seo-pilot v${VERSION} — Organic SEO promotion CLI
 
@@ -79,6 +81,8 @@ const COMMAND_HELP: Record<string, string> = {
   Options:
     --url <url>            Audit a single URL (default: all sitemap URLs)
     --checks <list>        Comma-separated checks: meta, schema, links, sitemap (default: all)
+    --base-url <url>       Override site URL (e.g. for staging/preview deploys)
+    --sitemap <url>        Override sitemap URL
     --config <path>        Path to config file`,
 };
 

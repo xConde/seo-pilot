@@ -426,6 +426,135 @@ describe('audit command', () => {
     expect(entries[0].results.sitemap).toBeUndefined();
   });
 
+  it('should override site URL and derive sitemap when --base-url flag provided', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    const htmlContent = '<html><head><title>Test</title></head></html>';
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => htmlContent,
+    });
+
+    vi.mocked(history.appendHistory).mockResolvedValue();
+
+    await runAudit({ url: 'https://staging.example.com/test', 'base-url': 'https://staging.example.com' });
+
+    // sitemap should have been derived from base-url
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith('https://staging.example.com/test');
+  });
+
+  it('should override sitemap URL when --sitemap flag provided', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    vi.mocked(sitemap.fetchSitemapUrls).mockResolvedValue(['https://example.com/page1']);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => '<html><head><title>Test</title></head></html>',
+    });
+
+    vi.mocked(history.appendHistory).mockResolvedValue();
+
+    await runAudit({ sitemap: 'https://example.com/custom-sitemap.xml' });
+
+    expect(sitemap.fetchSitemapUrls).toHaveBeenCalledWith('https://example.com/custom-sitemap.xml');
+  });
+
+  it('should not override sitemap when --base-url and --sitemap are both provided', async () => {
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    vi.mocked(sitemap.fetchSitemapUrls).mockResolvedValue(['https://staging.example.com/page1']);
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => '<html><head><title>Test</title></head></html>',
+    });
+
+    vi.mocked(history.appendHistory).mockResolvedValue();
+
+    await runAudit({ 'base-url': 'https://staging.example.com', sitemap: 'https://staging.example.com/custom-sitemap.xml' });
+
+    // explicit --sitemap should win over derived sitemap
+    expect(sitemap.fetchSitemapUrls).toHaveBeenCalledWith('https://staging.example.com/custom-sitemap.xml');
+  });
+
+  it('should reject invalid --base-url (non-HTTP protocol)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ 'base-url': 'file:///etc/passwd' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --base-url')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid --base-url (not a URL)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ 'base-url': 'not-a-url' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --base-url')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid --sitemap URL', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(configLoader.loadConfig).mockReturnValue({
+      version: '1',
+      site: { url: 'https://example.com', sitemap: 'https://example.com/sitemap.xml' },
+      keywords: [],
+      apis: {},
+      discover: { sites: [], resultsPerKeyword: 5 },
+    });
+
+    await runAudit({ sitemap: 'ftp://example.com/sitemap.xml' });
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid --sitemap')
+    );
+    expect(sitemap.fetchSitemapUrls).not.toHaveBeenCalled();
+  });
+
   it('should detect sitemap index and not check child sitemap URLs', async () => {
     vi.mocked(configLoader.loadConfig).mockReturnValue({
       version: '1',

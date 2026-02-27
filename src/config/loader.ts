@@ -32,14 +32,21 @@ function loadEnvFile(envPath: string): void {
 
 /**
  * Recursively substitutes ${VAR} patterns in string values with environment variables.
- * @throws Error if a referenced environment variable is not set
+ * Supports ${VAR:-default} syntax for optional vars with fallback values.
+ * @throws Error if a referenced environment variable is not set (plain ${VAR} syntax only)
  */
 function substituteEnvVars(obj: unknown): unknown {
   if (typeof obj === 'string') {
-    return obj.replace(/\$\{([^}]+)\}/g, (match, varName) => {
-      const value = process.env[varName];
+    return obj.replace(/\$\{([^}]+)\}/g, (_match, expr: string) => {
+      const defaultMatch = expr.match(/^([^:]+):-(.*)$/);
+      if (defaultMatch) {
+        const varName = defaultMatch[1]!;
+        const fallback = defaultMatch[2]!;
+        return process.env[varName] ?? fallback;
+      }
+      const value = process.env[expr];
       if (value === undefined) {
-        throw new Error(`Environment variable "${varName}" is not set but referenced in config`);
+        throw new Error(`Environment variable "${expr}" is not set but referenced in config`);
       }
       return value;
     });
@@ -98,5 +105,32 @@ export function loadConfig(path?: string): Config {
     throw new Error(`Config validation failed: ${errors}`);
   }
 
-  return result.data;
+  const config = result.data;
+
+  // Strip API blocks where required fields are empty (from ${VAR:-} fallback).
+  // This ensures downstream `if (!config.apis.google)` checks correctly skip
+  // unconfigured APIs rather than attempting auth with empty credentials.
+  if (config.apis.indexnow && !config.apis.indexnow.key?.trim()) {
+    config.apis.indexnow = undefined;
+  }
+  if (config.apis.google && (!config.apis.google.serviceAccountPath?.trim() || !config.apis.google.siteUrl?.trim())) {
+    config.apis.google = undefined;
+  }
+  if (config.apis.bing && (!config.apis.bing.apiKey?.trim() || !config.apis.bing.siteUrl?.trim())) {
+    config.apis.bing = undefined;
+  }
+  if (config.apis.customSearch && (!config.apis.customSearch.apiKey?.trim() || !config.apis.customSearch.engineId?.trim())) {
+    config.apis.customSearch = undefined;
+  }
+
+  // Resolve relative serviceAccountPath from config directory
+  if (config.apis.google?.serviceAccountPath) {
+    const resolvedPath = resolve(configDir, config.apis.google.serviceAccountPath);
+    config.apis.google.serviceAccountPath = resolvedPath;
+    if (!existsSync(resolvedPath)) {
+      throw new Error(`Google service account file not found: ${resolvedPath}`);
+    }
+  }
+
+  return config;
 }

@@ -17,7 +17,7 @@ export const ConfigSchema = z.object({
     }).optional(),
     bing: z.object({
       apiKey: z.string(),
-      siteUrl: z.string().url(),
+      siteUrl: z.string(),
     }).optional(),
     customSearch: z.object({
       apiKey: z.string(),

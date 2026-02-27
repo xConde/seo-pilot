@@ -68,16 +68,17 @@ describe('runInspect', () => {
     });
   });
 
-  it('should exit if Google is not configured', async () => {
+  it('should warn and return if Google is not configured', async () => {
     vi.mocked(loadConfig).mockReturnValue({
       ...mockConfig,
       apis: {},
     } as any);
 
-    await expect(runInspect({})).rejects.toThrow('process.exit(1)');
+    await expect(runInspect({})).resolves.toBeUndefined();
 
-    expect(log.error).toHaveBeenCalledWith('Google Search Console is not configured');
+    expect(log.warn).toHaveBeenCalledWith('Google is not configured — skipping inspect');
     expect(log.info).toHaveBeenCalledWith('Run "seo-pilot setup" to configure Google integration');
+    expect(getGoogleAccessToken).not.toHaveBeenCalled();
   });
 
   it('should inspect a single URL when --url flag is provided', async () => {

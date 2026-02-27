@@ -217,4 +217,208 @@ describe('loadConfig', () => {
       unlinkSync(defaultPath);
     }
   });
+
+  it('supports optional env vars with default syntax', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${OPTIONAL_KEY:-fallback-key}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('fallback-key');
+  });
+
+  it('uses env var value over default when var is set', () => {
+    vi.stubEnv('SET_VAR', 'real-value');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${SET_VAR:-fallback}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    expect(result.apis.indexnow?.key).toBe('real-value');
+  });
+
+  it('strips API blocks when ${VAR:-} resolves to empty string', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: {
+          key: '${EMPTY_DEFAULT:-}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Empty key means unconfigured — block should be stripped
+    expect(result.apis.indexnow).toBeUndefined();
+  });
+
+  it('throws when service account file does not exist', () => {
+    vi.stubEnv('GOOGLE_SA_PATH', '/nonexistent/service-account.json');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        google: {
+          serviceAccountPath: '${GOOGLE_SA_PATH}',
+          siteUrl: 'https://example.com',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+
+    expect(() => loadConfig(TEST_CONFIG_PATH)).toThrow(
+      'Google service account file not found'
+    );
+  });
+
+  it('resolves relative serviceAccountPath from config directory', () => {
+    // Create a fake service account file in the test dir
+    const saPath = join(TEST_DIR, 'creds.json');
+    writeFileSync(saPath, JSON.stringify({ type: 'service_account' }));
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        google: {
+          serviceAccountPath: './creds.json',
+          siteUrl: 'https://example.com',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Should resolve relative to config dir, not cwd
+    expect(result.apis.google?.serviceAccountPath).toBe(saPath);
+  });
+
+  it('strips API blocks with empty string values from optional env vars', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '' },
+        google: { serviceAccountPath: '', siteUrl: '' },
+        bing: { apiKey: '', siteUrl: 'https://example.com' },
+        customSearch: { apiKey: '', engineId: '' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // All API blocks should be stripped — empty strings mean unconfigured
+    expect(result.apis.indexnow).toBeUndefined();
+    expect(result.apis.google).toBeUndefined();
+    expect(result.apis.bing).toBeUndefined();
+    expect(result.apis.customSearch).toBeUndefined();
+  });
+
+  it('keeps API blocks with valid values alongside empty optional ones', () => {
+    vi.stubEnv('REAL_KEY', 'my-indexnow-key');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '${REAL_KEY}' },
+        google: { serviceAccountPath: '', siteUrl: '' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // IndexNow should survive, Google should be stripped
+    expect(result.apis.indexnow?.key).toBe('my-indexnow-key');
+    expect(result.apis.google).toBeUndefined();
+  });
+
+  it('strips bing block when both fields use empty ${VAR:-} fallback', () => {
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        bing: {
+          apiKey: '${BING_API_KEY:-}',
+          siteUrl: '${BING_SITE_URL:-}',
+        },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Both fields empty — block should be stripped, not crash on .url() validation
+    expect(result.apis.bing).toBeUndefined();
+  });
+
+  it('strips API blocks when env vars contain only whitespace', () => {
+    vi.stubEnv('WHITESPACE_KEY', '   ');
+
+    const config = {
+      version: '1',
+      site: {
+        url: 'https://example.com',
+        sitemap: 'https://example.com/sitemap.xml',
+      },
+      apis: {
+        indexnow: { key: '${WHITESPACE_KEY}' },
+      },
+    };
+
+    writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config));
+    const result = loadConfig(TEST_CONFIG_PATH);
+
+    // Whitespace-only value should be treated as empty — block stripped
+    expect(result.apis.indexnow).toBeUndefined();
+  });
 });

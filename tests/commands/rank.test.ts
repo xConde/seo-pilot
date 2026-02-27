@@ -78,16 +78,17 @@ describe('runRank', () => {
     });
   });
 
-  it('should exit if Google is not configured', async () => {
+  it('should warn and return if Google is not configured', async () => {
     vi.mocked(loadConfig).mockReturnValue({
       ...mockConfig,
       apis: {},
     } as any);
 
-    await expect(runRank({})).rejects.toThrow('process.exit(1)');
+    await expect(runRank({})).resolves.toBeUndefined();
 
-    expect(log.error).toHaveBeenCalledWith('Google Search Console is not configured');
+    expect(log.warn).toHaveBeenCalledWith('Google is not configured — skipping rank');
     expect(log.info).toHaveBeenCalledWith('Run "seo-pilot setup" to configure Google integration');
+    expect(getGoogleAccessToken).not.toHaveBeenCalled();
   });
 
   it('should query performance data with default 28 days', async () => {

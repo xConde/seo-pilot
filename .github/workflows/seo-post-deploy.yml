@@ -1,0 +1,76 @@
+name: SEO Post-Deploy
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to seo-pilot config in the calling repo
+        type: string
+        required: true
+      commands:
+        description: Space-separated seo-pilot commands to run
+        type: string
+        default: index
+    secrets:
+      GOOGLE_SERVICE_ACCOUNT_JSON:
+        required: false
+      INDEXNOW_KEY:
+        required: false
+      BING_WEBMASTER_API_KEY:
+        required: false
+      GOOGLE_CUSTOM_SEARCH_KEY:
+        required: false
+      GOOGLE_CSE_ID:
+        required: false
+
+jobs:
+  seo:
+    name: Run SEO Commands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g seo-pilot
+
+      - name: Write Google service account file
+        if: env.GOOGLE_SERVICE_ACCOUNT_JSON != ''
+        run: |
+          mkdir -p .credentials
+          echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > .credentials/google-sa.json
+        shell: bash
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Write secrets to .env.local
+        run: |
+          if [ -n "$INDEXNOW_KEY" ]; then
+            echo "INDEXNOW_KEY=$INDEXNOW_KEY" >> .env.local
+          fi
+          if [ -n "$BING_WEBMASTER_API_KEY" ]; then
+            echo "BING_WEBMASTER_API_KEY=$BING_WEBMASTER_API_KEY" >> .env.local
+          fi
+          if [ -n "$GOOGLE_CUSTOM_SEARCH_KEY" ]; then
+            echo "GOOGLE_CUSTOM_SEARCH_KEY=$GOOGLE_CUSTOM_SEARCH_KEY" >> .env.local
+          fi
+          if [ -n "$GOOGLE_CSE_ID" ]; then
+            echo "GOOGLE_CSE_ID=$GOOGLE_CSE_ID" >> .env.local
+          fi
+          if [ -f .credentials/google-sa.json ]; then
+            echo "GOOGLE_SERVICE_ACCOUNT_PATH=.credentials/google-sa.json" >> .env.local
+          fi
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+          BING_WEBMASTER_API_KEY: ${{ secrets.BING_WEBMASTER_API_KEY }}
+          GOOGLE_CUSTOM_SEARCH_KEY: ${{ secrets.GOOGLE_CUSTOM_SEARCH_KEY }}
+          GOOGLE_CSE_ID: ${{ secrets.GOOGLE_CSE_ID }}
+
+      - name: Run seo-pilot commands
+        run: |
+          for cmd in $COMMANDS; do
+            seo-pilot "$cmd" --config "$CONFIG_PATH"
+          done
+        env:
+          COMMANDS: ${{ inputs.commands }}
+          CONFIG_PATH: ${{ inputs.config-path }}
