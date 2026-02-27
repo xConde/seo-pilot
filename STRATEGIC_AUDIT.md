@@ -112,5 +112,5 @@ The CI/CD pipelines and integration config exist, but when bmtgradweek's CI runs
 
 - [x] **1. Update CLAUDE.md test count** — 178 → 180 after red-team tests added
 - [x] **2. Tighten `release.yml` tag pattern** — `v*` → semver pattern, add version-tag match check (Finding 11)
-- [ ] **3. Full suite verification** — `npm test`, `tsc --noEmit`, `npm run build`, `node dist/cli.js --version`
+- [x] **3. Full suite verification** — 180/180 tests, typecheck clean, build clean, `--version` → `0.1.0`
 - [ ] **4. Push branch and update PR**
